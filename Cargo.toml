@@ -1,0 +1,12 @@
+[package]
+name = "nu_plugin_tui"
+version = "0.1.0"
+edition = "2024"
+description = "Expose Ratatui user interfaces as Nushell commands"
+license = "MIT"
+
+[dependencies]
+nu-plugin = "0.114.1"
+nu-protocol = "0.114.1"
+ratatui = "0.30.2"
+
