@@ -1,6 +1,6 @@
 # Getting started
 
-The plugin targets Nushell 0.114.1 and provides the `tui run` and `tui example` commands.
+The plugin targets Nushell 0.114.1 and provides `tui run` plus widget record constructors directly under `tui`.
 
 ## Build and run without installing
 
@@ -17,16 +17,6 @@ nu --plugins target/debug/nu_plugin_tui examples/counter.nu
 ```
 
 This does not change the Nushell plugin registry.
-
-## Explore built-in widget examples
-
-Each widget has its own zero-argument example subcommand, so you can open a focused demonstration without writing a widget record:
-
-```sh
-nu --plugins target/debug/nu_plugin_tui -c 'tui example paragraph'
-```
-
-The available subcommands are `tui example layout`, `tui example paragraph`, `tui example button`, `tui example list`, `tui example gauge`, and `tui example spacer`. Press Escape or Ctrl-C to exit.
 
 ## Install the plugin
 

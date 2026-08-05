@@ -6,7 +6,6 @@
 | --- | --- |
 | `src/main.rs` | Starts the Nushell plugin protocol loop. |
 | `src/plugin.rs` | Registers the plugin and its commands. |
-| `src/example.rs` | Implements the `tui example ...` widget subcommands and their built-in views. |
 | `src/run.rs` | Implements `tui run`, terminal lifecycle, events, and handlers. |
 | `src/config.rs` | Parses application and widget records. |
 | `src/ui.rs` | Renders widget trees and records button hit targets. |

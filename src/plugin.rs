@@ -1,8 +1,8 @@
 use nu_plugin::{Plugin, PluginCommand};
 
 use crate::{
-    example::{TuiExample, WidgetExample},
     run::TuiRun,
+    widget::{TuiWidget, WidgetKind},
 };
 
 /// Nushell plugin exposing Ratatui commands.
@@ -16,10 +16,11 @@ impl Plugin for TuiPlugin {
 
     /// Returns the commands exported by this plugin.
     fn commands(&self) -> Vec<Box<dyn PluginCommand<Plugin = Self>>> {
-        let mut commands: Vec<Box<dyn PluginCommand<Plugin = Self>>> = vec![Box::new(TuiRun)];
+        let mut commands: Vec<Box<dyn PluginCommand<Plugin = Self>>> =
+            vec![Box::new(TuiRun)];
         commands.extend(
-            WidgetExample::ALL
-                .map(TuiExample::new)
+            WidgetKind::ALL
+                .map(TuiWidget::new)
                 .map(|command| Box::new(command) as Box<dyn PluginCommand<Plugin = Self>>),
         );
         commands

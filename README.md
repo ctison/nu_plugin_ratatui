@@ -15,13 +15,21 @@ nu --plugins target/debug/nu_plugin_tui examples/counter.nu
 
 This one-shot command does not modify your plugin registry.
 
-To explore one widget without writing an application first, run a built-in example:
+Widgets can also be declared with named flags. The `tui` namespace exposes one constructor subcommand per widget and returns ordinary records:
 
-```sh
-nu --plugins target/debug/nu_plugin_tui -c 'tui example gauge'
+```nu
+let content = tui paragraph --text "Composable widgets" --alignment center
+let progress = tui gauge --ratio 0.65 --label "65%" --border true
+
+tui run {
+  view: (tui layout
+    --direction vertical
+    --constraints [{fill: 1} {length: 3}]
+    --children [$content $progress])
+}
 ```
 
-Every widget below has a matching zero-argument `tui example <type>` subcommand. Press Escape or Ctrl-C to close any example.
+Required widget fields are required flags; optional fields are emitted only when supplied. Constructor output is validated against the same schema used by `tui run`.
 
 ## Install
 
@@ -94,7 +102,7 @@ Ctrl-C always exits. Escape exits unless `quit-on-esc` is false.
 
 ## Widgets
 
-All widgets are records with a `type` field.
+All widgets are records with a `type` field. Write them directly or construct them with `tui <type>` flags.
 
 - Ratatui widgets: `bar-chart`, `block`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`.
 - Plugin composition widgets: `layout`, `button`, and `spacer`.

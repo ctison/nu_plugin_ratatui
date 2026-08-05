@@ -1,10 +1,10 @@
 use nu_plugin::{MsgPackSerializer, serve_plugin};
 
 mod config;
-mod example;
 mod plugin;
 mod run;
 mod ui;
+mod widget;
 
 use plugin::TuiPlugin;
 

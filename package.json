@@ -2,6 +2,7 @@
   "name": "@ctison/nu_plugin_ratatui",
   "type": "module",
   "scripts": {
-    "update": "bun update -ri"
+    "update": "bun update -ri",
+    "reload": "cargo install --path . --locked && plugin rm ratatui && plugin add nu_plugin_ratatui && plugin use nu_plugin_ratatui"
   }
 }
