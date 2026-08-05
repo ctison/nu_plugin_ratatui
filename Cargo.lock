@@ -1569,8 +1569,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "nu_plugin_tui"
-version = "0.1.0"
+name = "nu_plugin_ratatui"
+version = "0.0.0"
 dependencies = [
  "nu-plugin",
  "nu-protocol",

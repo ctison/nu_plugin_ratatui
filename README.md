@@ -2,6 +2,8 @@
 
 `nu_plugin_tui` exposes [Ratatui](https://ratatui.rs/) as declarative Nushell commands. Build a widget tree with Nu records, keep application state as any Nu value, and use ordinary Nu closures for click and keyboard handlers.
 
+Detailed guides and reference material are available in [`doc/`](doc/README.md).
+
 ## Quick start
 
 The plugin targets Nushell 0.114.1.
@@ -12,6 +14,14 @@ nu --plugins target/debug/nu_plugin_tui examples/counter.nu
 ```
 
 This one-shot command does not modify your plugin registry.
+
+To explore one widget without writing an application first, run a built-in example:
+
+```sh
+nu --plugins target/debug/nu_plugin_tui -c 'tui example gauge'
+```
+
+Every widget below has a matching zero-argument `tui example <type>` subcommand. Press Escape or Ctrl-C to close any example.
 
 ## Install
 
@@ -86,12 +96,10 @@ Ctrl-C always exits. Escape exits unless `quit-on-esc` is false.
 
 All widgets are records with a `type` field.
 
-- `layout`: `direction` (`vertical` or `horizontal`), `children`, and optional `constraints`.
-- `paragraph`: `text`, optional `alignment`, and `wrap`.
-- `button`: `id`, `label`, and optional `on-click` closure.
-- `list`: string `items`.
-- `gauge`: `ratio` from `0.0` to `1.0` and optional `label`.
-- `spacer`: reserves its layout area without drawing.
+- Ratatui widgets: `bar-chart`, `block`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`.
+- Plugin composition widgets: `layout`, `button`, and `spacer`.
+
+The records for data-driven widgets use ordinary Nu values: bar records for `bar-chart`, `[x y]` pairs for `chart`, point records for `canvas`, nested string lists for `table`, and integer or null samples for `sparkline`. See [`doc/widgets.md`](doc/widgets.md) for every field and a runnable record for each widget.
 
 Constraints are one-field records: `{length: 3}`, `{percentage: 50}`, `{min: 10}`, `{max: 20}`, or `{fill: 1}`. When omitted, every child gets `{fill: 1}`.
 

@@ -1,0 +1,7 @@
+{
+  "name": "@ctison/nu_plugin_ratatui",
+  "type": "module",
+  "scripts": {
+    "update": "bun update -ri"
+  }
+}

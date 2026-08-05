@@ -115,34 +115,46 @@ directly, or an action record such as `{ state: $next, quit: false }`. Supported
         call: &EvaluatedCall,
         _input: &Value,
     ) -> Result<Value, LabeledError> {
-        if engine.is_using_stdio() {
-            return Err(LabeledError::new(
-                "`tui run` requires Nushell's local-socket plugin mode",
-            )
-            .with_label(
-                "stdio is occupied by the plugin protocol and cannot host a TUI",
-                call.head,
-            )
-            .with_help("Register and invoke the plugin with a Nushell build that supports local sockets"));
-        }
-
         let config_value: Value = call.req(0).map_err(|error| labeled_shell_error(&error))?;
         let config = AppConfig::parse(&config_value, call.head)?;
-        let foreground = engine
-            .enter_foreground()
-            .map_err(|error| labeled_shell_error(&error))?;
-        let mut session = TerminalSession::enter(call.head)?;
-        let result = run_loop(engine, &mut session.terminal, &config, call.head);
-        drop(session);
-        let leave_result = foreground
-            .leave()
-            .map_err(|error| labeled_shell_error(&error));
+        run_application(engine, self.name(), &config, call.head)
+    }
+}
 
-        match (result, leave_result) {
-            (Err(error), _) => Err(error),
-            (Ok(_), Err(error)) => Err(error),
-            (Ok(value), Ok(())) => Ok(value),
-        }
+/// Runs a parsed application with the shared foreground terminal lifecycle.
+pub(crate) fn run_application(
+    engine: &EngineInterface,
+    command_name: &str,
+    config: &AppConfig,
+    span: Span,
+) -> Result<Value, LabeledError> {
+    if engine.is_using_stdio() {
+        return Err(LabeledError::new(format!(
+            "`{command_name}` requires Nushell's local-socket plugin mode"
+        ))
+        .with_label(
+            "stdio is occupied by the plugin protocol and cannot host a TUI",
+            span,
+        )
+        .with_help(
+            "Register and invoke the plugin with a Nushell build that supports local sockets",
+        ));
+    }
+
+    let foreground = engine
+        .enter_foreground()
+        .map_err(|error| labeled_shell_error(&error))?;
+    let mut session = TerminalSession::enter(span)?;
+    let result = run_loop(engine, &mut session.terminal, config, span);
+    drop(session);
+    let leave_result = foreground
+        .leave()
+        .map_err(|error| labeled_shell_error(&error));
+
+    match (result, leave_result) {
+        (Err(error), _) => Err(error),
+        (Ok(_), Err(error)) => Err(error),
+        (Ok(value), Ok(())) => Ok(value),
     }
 }
 

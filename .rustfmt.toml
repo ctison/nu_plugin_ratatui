@@ -1,0 +1,6 @@
+#:schema https://www.schemastore.org/rustfmt.json
+
+match_block_trailing_comma = true
+newline_style = "Unix"
+tab_spaces = 2
+use_field_init_shorthand = true

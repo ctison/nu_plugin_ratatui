@@ -1,0 +1,8 @@
+[tools]
+rust = "1"
+
+[env]
+"_".path = [".bin/"]
+
+[settings.status]
+missing_tools = "always"
