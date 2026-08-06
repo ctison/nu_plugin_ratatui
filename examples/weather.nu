@@ -18,8 +18,8 @@ let bars = $temperatures | enumerate | each { |sample|
   }
 }
 
-tui run {
-  view: {
+(tui
+  {
     type: layout
     direction: vertical
     constraints: [{length: 2} {fill: 1} {length: 1}]
@@ -39,4 +39,4 @@ tui run {
       {type: paragraph text: "00                                      12                                      23" alignment: center style: {fg: dark_gray}}
     ]
   }
-}
+)

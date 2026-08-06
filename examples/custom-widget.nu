@@ -1,16 +1,16 @@
 # Dependency-free adaptation of Ratatui's examples/apps/custom-widget.
 # Click a cell to change its state; r resets and q quits.
-tui run {
-  state: {selected: 4}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {selected: 4}
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "r" => {state: {selected: 4}}
       _ => null
     }
   }
-  view: { |app|
+  { |app|
     let cells = 0..8 | each { |index|
       let active = $index == $app.selected
       {
@@ -33,4 +33,4 @@ tui run {
       children: ([{type: paragraph text: "Custom Widget — click a cell • r reset • q quit" alignment: center style: {bold: true}}] | append $rows)
     }
   }
-}
+)

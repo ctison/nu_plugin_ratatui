@@ -9,10 +9,10 @@ let initial_items = [
   {done: true todo: "Refactor list example" info: "If you see this, the refactor is complete."}
 ]
 
-tui run {
-  state: {items: $initial_items selected: 0}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {items: $initial_items selected: 0}
+  --quit-on-esc false
+  --on-key { |event|
     let last_index = ($event.state.items | length) - 1
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
@@ -31,7 +31,7 @@ tui run {
       _ => null
     }
   }
-  view: { |app|
+  { |app|
     let labels = $app.items | enumerate | each { |entry|
       let cursor = if $entry.index == $app.selected { ">" } else { " " }
       let mark = if $entry.item.done { "✓" } else { "☐" }
@@ -56,4 +56,4 @@ tui run {
       ]
     }
   }
-}
+)

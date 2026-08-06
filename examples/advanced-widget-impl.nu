@@ -1,14 +1,14 @@
 # Declarative adaptation of Ratatui's examples/apps/advanced-widget-impl.
 # Records and closures illustrate the same owned, borrowed, mutable, and stateful render roles.
-tui run {
-  state: {count: 0}
-  tick-rate-ms: 250
-  on-event: { |event|
+(tui
+  --state {count: 0}
+  --tick-rate-ms 250
+  --on-event { |event|
     if $event.type == tick {
       {state: ($event.state | update count ($event.state.count + 1))}
     }
   }
-  view: { |app|
+  { |app|
     {
       type: layout
       direction: vertical
@@ -34,4 +34,4 @@ tui run {
       ]
     }
   }
-}
+)

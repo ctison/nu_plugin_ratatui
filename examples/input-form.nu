@@ -1,9 +1,9 @@
 # Port of Ratatui's examples/apps/input-form without serde or JSON dependencies.
 # Tab moves focus, Enter submits, and Escape cancels.
-tui run {
-  state: {focus: 0 first-name: [] last-name: [] age: 0 result: editing}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {focus: 0 first-name: [] last-name: [] age: 0 result: editing}
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "escape" => {state: ($event.state | update result canceled) quit: true}
       "enter" => {state: ($event.state | update result submitted) quit: true}
@@ -41,7 +41,7 @@ tui run {
       }
     }
   }
-  view: { |form|
+  { |form|
     let values = [($form.first-name | str join) ($form.last-name | str join) ($form.age | into string)]
     let labels = ["First Name" "Last Name" "Age"]
     let fields = 0..2 | each { |index|
@@ -61,4 +61,4 @@ tui run {
       children: ([{type: paragraph text: "Input Form — Tab focus • Enter submit • Esc cancel" alignment: center style: {bold: true}}] | append $fields | append [{type: spacer}])
     }
   }
-}
+)

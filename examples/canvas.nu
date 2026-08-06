@@ -9,10 +9,10 @@ let wave = -100..100 | each { |x|
 }
 let axes = (-100..100 | each { |x| {x: $x y: 0 color: dark_gray} }) | append (-50..50 | each { |y| {x: 0 y: $y color: dark_gray} })
 
-tui run {
-  state: {x: 0 y: 0 marker-index: 0}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {x: 0 y: 0 marker-index: 0}
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "h" | "left" => {state: ($event.state | update x ($event.state.x - 2))}
@@ -23,7 +23,7 @@ tui run {
       _ => null
     }
   }
-  view: { |app|
+  { |app|
     let marker = [dot braille block half-block quadrant sextant octant bar] | get $app.marker-index
     let points = $axes | append $circle | append $wave | append [{x: $app.x y: $app.y color: yellow}]
     {
@@ -45,4 +45,4 @@ tui run {
       ]
     }
   }
-}
+)

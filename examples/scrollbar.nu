@@ -1,9 +1,9 @@
 # Port of Ratatui's examples/apps/scrollbar.
 # Use h/j/k/l or arrow keys to move the four scrollbar examples.
-tui run {
-  state: {vertical: 0 horizontal: 0}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {vertical: 0 horizontal: 0}
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "j" | "down" => {state: ($event.state | update vertical ([90 ($event.state.vertical + 1)] | math min))}
@@ -13,7 +13,7 @@ tui run {
       _ => null
     }
   }
-  view: { |app|
+  { |app|
     {
       type: layout
       direction: vertical
@@ -35,4 +35,4 @@ tui run {
       ]
     }
   }
-}
+)

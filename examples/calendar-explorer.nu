@@ -1,9 +1,9 @@
 # Port of Ratatui's examples/apps/calendar-explorer.
 # Use n/p to change year and s to cycle the calendar presentation.
-tui run {
-  state: {year: 2026 style-index: 0}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {year: 2026 style-index: 0}
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "n" | "right" => {state: ($event.state | update year ($event.state.year + 1))}
@@ -12,7 +12,7 @@ tui run {
       _ => null
     }
   }
-  view: { |app|
+  { |app|
     let show_weekdays = $app.style-index in [1 3]
     let show_surrounding = $app.style-index in [2 3]
     let style_name = [Default "Weekday headers" "Surrounding dates" "Headers + surrounding"] | get $app.style-index
@@ -47,4 +47,4 @@ tui run {
       }] | append $rows)
     }
   }
-}
+)

@@ -8,8 +8,8 @@ let rows = [
   ["Donald Knuth" "Milwaukee, Wisconsin" "donald@example.com"]
 ]
 
-tui run {
-  view: {
+(tui
+  {
     type: layout
     direction: vertical
     constraints: [{length: 2} {fill: 1} {length: 1}]
@@ -30,4 +30,4 @@ tui run {
       {type: paragraph text: "Press Esc to quit" alignment: center style: {fg: dark_gray}}
     ]
   }
-}
+)

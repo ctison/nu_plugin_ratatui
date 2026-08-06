@@ -3,8 +3,8 @@ let main_dishes = ["> ratatui" "> ratatui-core" "> ratatui-widgets" "> ratatui-m
 let backends = ["> ratatui-crossterm" "> ratatui-termion" "> ratatui-termina" "> ratatui-termwiz"]
 let background = {type: fill symbol: " " style: {fg: "#f6d6bb" bg: "#141432"}}
 
-tui run {
-  view: {
+(tui
+  {
     type: layout
     direction: vertical
     constraints: [{fill: 1} {length: 13} {fill: 1}]
@@ -43,4 +43,4 @@ tui run {
       $background
     ]
   }
-}
+)

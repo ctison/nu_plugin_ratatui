@@ -1,7 +1,7 @@
 # Port of Ratatui's examples/apps/hello-world.
 # Run with `nu --plugins target/debug/nu_plugin_ratatui examples/hello-world.nu`.
-tui run {
-  view: {
+(tui
+  {
     type: layout
     direction: vertical
     constraints: [{fill: 1} {length: 3} {fill: 1}]
@@ -19,4 +19,4 @@ tui run {
       {type: spacer}
     ]
   }
-}
+)

@@ -21,8 +21,8 @@ use crate::{
   ui::HitTarget,
 };
 
-/// The `tui run` command implementation.
-pub struct TuiRun;
+/// The root `tui` command implementation.
+pub struct Tui;
 
 /// Mutable application values that handlers may replace.
 struct AppState {
@@ -44,21 +44,49 @@ struct TerminalSession {
   terminal: DefaultTerminal,
 }
 
-impl SimplePluginCommand for TuiRun {
+impl SimplePluginCommand for Tui {
   type Plugin = TuiPlugin;
 
   /// Returns the command name exposed to Nushell.
   fn name(&self) -> &str {
-    "tui run"
+    "tui"
   }
 
-  /// Defines the accepted application record and final-state output.
+  /// Defines the positional view, application flags, and final-state output.
   fn signature(&self) -> Signature {
     Signature::build(self.name())
       .required(
-        "config",
-        SyntaxShape::Record(Vec::new().into()),
-        "Application record containing `view`, handlers, and optional state",
+        "view",
+        SyntaxShape::OneOf(vec![
+          SyntaxShape::Record(Vec::new().into()),
+          SyntaxShape::Closure(None),
+        ]),
+        "Widget tree or closure that returns one",
+      )
+      .named("state", SyntaxShape::Any, "Initial application state", None)
+      .named(
+        "on-event",
+        SyntaxShape::Closure(None),
+        "Handler for every terminal event",
+        None,
+      )
+      .named(
+        "on-key",
+        SyntaxShape::Closure(None),
+        "Handler for key press events",
+        None,
+      )
+      .named(
+        "quit-on-esc",
+        SyntaxShape::Boolean,
+        "Whether Escape exits the application",
+        None,
+      )
+      .named(
+        "tick-rate-ms",
+        SyntaxShape::Int,
+        "Event polling and redraw interval in milliseconds",
+        None,
       )
       .input_output_type(Type::Nothing, Type::Any)
       .category(Category::Experimental)
@@ -71,18 +99,16 @@ impl SimplePluginCommand for TuiRun {
 
   /// Documents the reactive view and handler return contracts.
   fn extra_description(&self) -> &str {
-    "The `view` field may be a widget record or a `{ |state| ... }` closure returning one. \
+    "The positional `view` may be a widget record or a `{ |state| ... }` closure returning one. \
 Handlers receive one event record containing the current `state`. A handler may return a new state \
 directly, or an action record such as `{ state: $next, quit: false }`. Supported action fields are \
 `state`, `view`, and `quit`. Escape exits by default; Ctrl-C always exits."
   }
 
-  /// Provides a compact clickable counter example in `help tui run`.
+  /// Provides a compact clickable counter example in `help tui`.
   fn examples(&self) -> Vec<Example<'_>> {
     vec![Example {
-      example: r#"tui run {
-  state: 0
-  view: { |count|
+      example: r#"tui --state 0 { |count|
     {
       type: layout
       direction: vertical
@@ -100,7 +126,6 @@ directly, or an action record such as `{ state: $next, quit: false }`. Supported
         {type: paragraph text: "Press Escape to exit" alignment: center}
       ]
     }
-  }
 }"#,
       description: "Run a button whose closure updates application state",
       result: None,
@@ -115,10 +140,23 @@ directly, or an action record such as `{ state: $next, quit: false }`. Supported
     call: &EvaluatedCall,
     _input: &Value,
   ) -> Result<Value, LabeledError> {
-    let config_value: Value = call.req(0).map_err(|error| labeled_shell_error(&error))?;
-    let config = AppConfig::parse(&config_value, call.head)?;
+    let config = parse_config(call)?;
     run_application(engine, self.name(), &config, call.head)
   }
+}
+
+/// Assembles and validates application configuration from command arguments.
+fn parse_config(call: &EvaluatedCall) -> Result<AppConfig, LabeledError> {
+  let view: Value = call.req(0).map_err(|error| labeled_shell_error(&error))?;
+  let mut record = Record::new();
+  record.push("view", view);
+  for (name, value) in &call.named {
+    if let Some(value) = value {
+      record.push(name.item.clone(), value.clone());
+    }
+  }
+  let config_value = Value::record(record, call.head);
+  AppConfig::parse(&config_value, call.head)
 }
 
 /// Runs a parsed application with the shared foreground terminal lifecycle.
@@ -530,10 +568,30 @@ fn labeled_io_error(context: &str, error: &io::Error, span: Span) -> LabeledErro
 
 #[cfg(test)]
 mod tests {
-  use nu_protocol::{Record, Span, Value};
+  use nu_plugin::EvaluatedCall;
+  use nu_protocol::{IntoSpanned, Record, Span, Value};
   use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-  use super::{AppState, apply_handler_result, is_escape_event, key_event_value};
+  use super::{AppState, apply_handler_result, is_escape_event, key_event_value, parse_config};
+
+  /// Verifies that the positional view and named flags form application configuration.
+  #[test]
+  fn parses_flattened_command_arguments() {
+    let span = Span::test_data();
+    let mut view = Record::new();
+    view.push("type", Value::test_string("spacer"));
+    let mut call = EvaluatedCall::new(span);
+    call.add_positional(Value::test_record(view));
+    call.add_named("state".into_spanned(span), Value::test_int(42));
+    call.add_named("quit-on-esc".into_spanned(span), Value::test_bool(false));
+    call.add_named("tick-rate-ms".into_spanned(span), Value::test_int(75));
+
+    let config = parse_config(&call).expect("valid flattened arguments");
+
+    assert_eq!(config.state.as_int().expect("integer state"), 42);
+    assert!(!config.quit_on_esc);
+    assert_eq!(config.tick_rate.as_millis(), 75);
+  }
 
   /// Builds a test record value from concise key/value pairs.
   fn record(fields: Vec<(&str, Value)>) -> Value {

@@ -1,10 +1,10 @@
 # Port of Ratatui's examples/apps/chart.
 # The two signals move on every tick; use h/l or the arrow keys to pan.
-tui run {
-  state: {offset: 0 phase: 0}
-  tick-rate-ms: 80
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {offset: 0 phase: 0}
+  --tick-rate-ms 80
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "h" | "left" => {state: ($event.state | update offset ($event.state.offset - 1))}
@@ -12,12 +12,12 @@ tui run {
       _ => null
     }
   }
-  on-event: { |event|
+  --on-event { |event|
     if $event.type == tick {
       {state: ($event.state | update phase ($event.state.phase + 1))}
     }
   }
-  view: { |app|
+  { |app|
     let wave = 0..40 | each { |x|
       let y = (($x + $app.phase) * 0.22 | math sin) * 4 + 5
       [($x + $app.offset) $y]
@@ -57,4 +57,4 @@ tui run {
       ]
     }
   }
-}
+)

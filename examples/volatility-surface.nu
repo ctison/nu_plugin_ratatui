@@ -2,11 +2,11 @@
 # Arrow keys rotate, p changes palette, Space pauses, and q quits.
 let palettes = [cyan magenta yellow green]
 
-tui run {
-  state: {angle: 0 tilt: 0.45 palette: 0 paused: false}
-  tick-rate-ms: 60
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {angle: 0 tilt: 0.45 palette: 0 paused: false}
+  --tick-rate-ms 60
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "left" => {state: ($event.state | update angle ($event.state.angle - 0.12))}
@@ -18,12 +18,12 @@ tui run {
       _ => null
     }
   }
-  on-event: { |event|
+  --on-event { |event|
     if $event.type == tick and not $event.state.paused {
       {state: ($event.state | update angle ($event.state.angle + 0.025))}
     }
   }
-  view: { |app|
+  { |app|
     let color = $palettes | get $app.palette
     let cosine = $app.angle | math cos
     let sine = $app.angle | math sin
@@ -47,4 +47,4 @@ tui run {
       ]
     }
   }
-}
+)

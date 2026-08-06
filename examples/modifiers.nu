@@ -20,8 +20,8 @@ let rows = $colors | each { |background|
   {type: layout direction: horizontal children: $cells}
 }
 
-tui run {
-  view: {
+(tui
+  {
     type: layout
     direction: vertical
     constraints: [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 1} {fill: 1}]
@@ -32,5 +32,5 @@ tui run {
       style: {fg: red bold: true}
     }] | append $rows)
   }
-  on-key: { |event| {state: $event.state quit: true} }
-}
+  --on-key { |event| {state: $event.state quit: true} }
+)

@@ -1,16 +1,16 @@
 # Port of Ratatui's examples/apps/popup using nested layouts for centering.
 # Press p to toggle the popup and q to quit.
-tui run {
-  state: {visible: false}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {visible: false}
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "p" => {state: ($event.state | update visible (not $event.state.visible))}
       _ => null
     }
   }
-  view: { |app|
+  { |app|
     if $app.visible {
       {
         type: layout
@@ -35,4 +35,4 @@ tui run {
       {type: paragraph text: "Popup Example\n\nPress p to open a centered popup, q to quit." alignment: center border: true title: " Background " style: {fg: gray}}
     }
   }
-}
+)

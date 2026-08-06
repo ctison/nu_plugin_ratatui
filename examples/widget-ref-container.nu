@@ -7,11 +7,11 @@ let widgets = [
   {type: bar-chart bars: [{label: A value: 3} {label: B value: 8} {label: C value: 5}] bar-width: 4 border: true title: " Bar chart "}
 ]
 
-tui run {
-  view: {
+(tui
+  {
     type: layout
     direction: vertical
     constraints: [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 2}]
     children: ([{type: paragraph text: "Widget container example — records compose heterogenous widgets" alignment: center style: {bold: true}}] | append $widgets)
   }
-}
+)

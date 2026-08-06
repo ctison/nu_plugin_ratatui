@@ -18,8 +18,8 @@ let rows = 0..15 | each { |row|
   {type: layout direction: horizontal children: $cells}
 }
 
-tui run {
-  view: {
+(tui
+  {
     type: layout
     direction: vertical
     constraints: ([{length: 2}] | append (0..15 | each { {fill: 1} }))
@@ -30,5 +30,5 @@ tui run {
       style: {bold: true}
     }] | append $rows)
   }
-  on-key: { |event| {state: $event.state quit: true} }
-}
+  --on-key { |event| {state: $event.state quit: true} }
+)

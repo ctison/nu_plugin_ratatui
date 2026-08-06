@@ -2,10 +2,10 @@
 # h/l selects a constraint and j/k changes its value.
 let kinds = [length percentage min max fill]
 
-tui run {
-  state: {selected: 0 amount: 20}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {selected: 0 amount: 20}
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "h" | "left" => {state: ($event.state | update selected ([0 ($event.state.selected - 1)] | math max))}
@@ -15,7 +15,7 @@ tui run {
       _ => null
     }
   }
-  view: { |app|
+  { |app|
     let kind = $kinds | get $app.selected
     let constraint = {} | insert $kind $app.amount
     let tabs = {
@@ -45,4 +45,4 @@ tui run {
       ]
     }
   }
-}
+)

@@ -11,7 +11,7 @@ use ratatui::{
 /// A Nushell closure paired with the source span that supplied it.
 pub type Handler = Spanned<Closure>;
 
-/// Runtime configuration parsed from the `tui run` record.
+/// Runtime configuration parsed from the root `tui` command arguments.
 #[derive(Clone)]
 pub struct AppConfig {
   pub state: Value,
@@ -194,7 +194,7 @@ pub enum UiNode {
 }
 
 impl AppConfig {
-  /// Parses and validates the top-level application record.
+  /// Parses and validates the assembled top-level application arguments.
   pub fn parse(value: &Value, call_span: Span) -> Result<Self, LabeledError> {
     let record = as_record(value, "config")?;
     let view = required(record, "view", value.span())?.clone();

@@ -1,8 +1,8 @@
 # Run with `nu --plugins target/debug/nu_plugin_ratatui examples/counter.nu` after `cargo build`.
-tui run {
-  state: 0
-  tick-rate-ms: 100
-  view: { |count|
+(tui
+  --state 0
+  --tick-rate-ms 100
+  { |count|
     {
       type: layout
       direction: vertical
@@ -29,4 +29,4 @@ tui run {
       ]
     }
   }
-}
+)

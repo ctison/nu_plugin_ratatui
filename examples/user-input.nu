@@ -1,9 +1,9 @@
 # Port of Ratatui's examples/apps/user-input.
 # Press e to edit, Escape to return to normal mode, Enter to save, and q to quit.
-tui run {
-  state: {mode: normal input: [] cursor: 0 messages: []}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {mode: normal input: [] cursor: 0 messages: []}
+  --quit-on-esc false
+  --on-key { |event|
     if $event.state.mode == normal {
       match $event.code {
         "e" => {state: ($event.state | update mode editing)}
@@ -34,7 +34,7 @@ tui run {
       }
     }
   }
-  view: { |app|
+  { |app|
     let help = if $app.mode == normal {
       "Press q to exit, e to start editing."
     } else {
@@ -55,4 +55,4 @@ tui run {
       ]
     }
   }
-}
+)

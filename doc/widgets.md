@@ -2,14 +2,14 @@
 
 Every widget is a Nushell record with a `type` field. A `layout` combines widgets into a tree; any other widget can also be the root view.
 
-Every widget also has a `tui <type>` constructor. Record fields become named flags, required fields become required flags, and every constructor returns a validated record that can be nested or used as `tui run`'s `view`:
+Every widget also has a `tui <type>` constructor. Record fields become named flags, required fields become required flags, and every constructor returns a validated record that can be nested or passed as `tui`'s positional view:
 
 ```nu
 let message = tui paragraph --text "Ready" --alignment center
 let meter = tui gauge --ratio 0.75 --label "75%" --gauge-style {fg: cyan}
 
 let view = tui layout --direction vertical --children [$message $meter]
-tui run {view: $view}
+tui $view
 ```
 
 Boolean fields accept explicit values, such as `--border true` or `--wrap false`. Optional flags omitted from a constructor are also omitted from its record, allowing the runtime defaults documented below to apply.

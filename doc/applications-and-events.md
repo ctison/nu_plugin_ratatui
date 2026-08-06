@@ -1,17 +1,17 @@
 # Applications and events
 
-`tui run` accepts one application record and returns the application's final state.
+`tui` accepts one positional view plus application flags and returns the application's final state.
 
-## Application fields
+## Application parameters
 
-| Field | Type | Required | Default | Description |
+| Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `view` | record or closure | yes | — | A widget tree, or `{ \|state\| ... }` returning one. |
-| `state` | any | no | `null` | The initial application state. |
-| `on-event` | closure | no | — | Handles every terminal event, including ticks. |
-| `on-key` | closure | no | — | Handles key press events. |
-| `quit-on-esc` | bool | no | `true` | Whether an Escape key press closes the application. |
-| `tick-rate-ms` | int | no | `250` | Event polling and redraw interval in milliseconds; must be at least 1. |
+| `view` | positional record or closure | yes | — | A widget tree, or `{ \|state\| ... }` returning one. |
+| `--state` | any | no | `null` | The initial application state. |
+| `--on-event` | closure | no | — | Handles every terminal event, including ticks. |
+| `--on-key` | closure | no | — | Handles key press events. |
+| `--quit-on-esc` | bool | no | `true` | Whether an Escape key press closes the application. |
+| `--tick-rate-ms` | int | no | `250` | Event polling and redraw interval in milliseconds; must be at least 1. |
 
 A closure-valued `view` receives the current state as its argument and pipeline input. It is evaluated before each frame is drawn.
 
@@ -89,27 +89,27 @@ For a left-button release over a button, handlers run in this order:
 
 For a key press, `on-key` runs before `on-event`. Key repeats and releases go only to `on-event`. State changes made by an earlier handler are visible to later handlers for the same event.
 
-Ctrl-C always closes the application after handlers run. Escape also closes it when `quit-on-esc` is `true`. The final state is returned to Nushell.
+Ctrl-C always closes the application after handlers run. Escape also closes it when `--quit-on-esc` is `true`. The final state is returned to Nushell.
 
 ## Example keyboard handler
 
 ```nu
-tui run {
-  state: 0
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state 0
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "+" => ($event.state + 1)
       "q" => {state: $event.state quit: true}
       _ => null
     }
   }
-  view: { |count|
+  { |count|
     {
       type: paragraph
       text: $"Count: ($count) — press + or q"
       alignment: center
     }
   }
-}
+)
 ```

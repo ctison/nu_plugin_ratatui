@@ -1,10 +1,10 @@
 # Dependency-free port of Ratatui's examples/apps/demo.
 # Use h/l or arrow keys to change tabs; q quits.
-tui run {
-  state: {tab: 0 progress: 0}
-  tick-rate-ms: 100
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {tab: 0 progress: 0}
+  --tick-rate-ms 100
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "h" | "left" => {state: ($event.state | update tab ([0 ($event.state.tab - 1)] | math max))}
@@ -12,12 +12,12 @@ tui run {
       _ => null
     }
   }
-  on-event: { |event|
+  --on-event { |event|
     if $event.type == tick {
       {state: ($event.state | update progress (($event.state.progress + 1) mod 101))}
     }
   }
-  view: { |app|
+  { |app|
     let content = match $app.tab {
       0 => {
         type: layout
@@ -64,4 +64,4 @@ tui run {
       ]
     }
   }
-}
+)

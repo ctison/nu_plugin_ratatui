@@ -382,7 +382,7 @@ impl SimplePluginCommand for TuiWidget {
   /// Explains how constructor output feeds layouts and applications.
   fn extra_description(&self) -> &str {
     "Returns a validated widget record. Compose records in `tui layout --children [...]` \
-and pass the result as the `view` field of `tui run`."
+and pass the result as the positional view of `tui`."
   }
 
   /// Converts supplied flags into a validated declarative widget record.

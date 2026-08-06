@@ -6,16 +6,16 @@ let colors = [
   "#4000ff" "#8000ff" "#c000ff" "#ff00ff" "#ff00bf" "#ff0080" "#ff0040" "#ff0000"
 ]
 
-tui run {
-  state: {offset: 0}
-  tick-rate-ms: 80
-  on-key: { |event| {state: $event.state quit: true} }
-  on-event: { |event|
+(tui
+  --state {offset: 0}
+  --tick-rate-ms 80
+  --on-key { |event| {state: $event.state quit: true} }
+  --on-event { |event|
     if $event.type == tick {
       {state: ($event.state | update offset (($event.state.offset + 1) mod ($colors | length)))}
     }
   }
-  view: { |app|
+  { |app|
     let palette = 0..23 | each { |index| $colors | get (($index + $app.offset) mod 24) }
     let rows = 0..11 | each { |row|
       let value = 255 - ($row * 18)
@@ -35,4 +35,4 @@ tui run {
       }] | append $rows)
     }
   }
-}
+)

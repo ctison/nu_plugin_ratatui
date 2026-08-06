@@ -21,15 +21,13 @@ Widgets can also be declared with named flags. The `tui` namespace exposes one c
 let content = tui paragraph --text "Composable widgets" --alignment center
 let progress = tui gauge --ratio 0.65 --label "65%" --border true
 
-tui run {
-  view: (tui layout
+tui (tui layout
     --direction vertical
     --constraints [{fill: 1} {length: 3}]
     --children [$content $progress])
-}
 ```
 
-Required widget fields are required flags; optional fields are emitted only when supplied. Constructor output is validated against the same schema used by `tui run`.
+Required widget fields are required flags; optional fields are emitted only when supplied. Constructor output is validated against the same schema used by `tui`.
 
 ## Install
 
@@ -46,16 +44,16 @@ Wait for `plugin add` to finish. Then, at the **next prompt**, run:
 source examples/counter.nu
 ```
 
-Nushell must parse `plugin add` before it can recognize `tui run`. Do not put registration and the example in the same script or `{ ... }` block. If `tui run` is still not found after registration, start a new Nushell process so it reloads the plugin registry.
+Nushell must parse `plugin add` before it can recognize `tui`. Do not put registration and the example in the same script or `{ ... }` block. If `tui` is still not found after registration, start a new Nushell process so it reloads the plugin registry.
 
 The interactive command requires Nushell's local-socket plugin transport because stdin and stdout must remain available to the terminal.
 
 ## Counter example
 
 ```nu
-tui run {
-  state: 0
-  view: { |count|
+(tui
+  --state 0
+  { |count|
     {
       type: layout
       direction: vertical
@@ -74,23 +72,23 @@ tui run {
       ]
     }
   }
-}
+)
 ```
 
-`tui run` returns the final state, so the example evaluates to the click count after the UI closes. A complete runnable version is in [`examples/counter.nu`](examples/counter.nu).
+`tui` returns the final state, so the example evaluates to the click count after the UI closes. A complete runnable version is in [`examples/counter.nu`](examples/counter.nu).
 
 The [`examples/`](examples/README.md) gallery also contains dependency-free Nushell ports of 26 applications from Ratatui's upstream examples.
 
-## Application record
+## Application command
 
-| Field | Type | Meaning |
+| Parameter | Type | Meaning |
 | --- | --- | --- |
-| `view` | record or closure | Required widget tree, or `{ \|state\| ... }` returning one |
-| `state` | any | Initial state; defaults to `null` |
-| `on-event` | closure | Handles every terminal event |
-| `on-key` | closure | Handles key press events |
-| `quit-on-esc` | bool | Exit on Escape; defaults to `true` |
-| `tick-rate-ms` | int | Redraw and tick interval; defaults to `250` |
+| `view` | positional record or closure | Required widget tree, or `{ \|state\| ... }` returning one |
+| `--state` | any | Initial state; defaults to `null` |
+| `--on-event` | closure | Handles every terminal event |
+| `--on-key` | closure | Handles key press events |
+| `--quit-on-esc` | bool | Exit on Escape; defaults to `true` |
+| `--tick-rate-ms` | int | Redraw and tick interval; defaults to `250` |
 
 Handlers receive one event record. Every event includes `type` and the current `state`; key events also contain `code`, `kind`, and `modifiers`, while mouse events contain coordinates, the mouse action, and `widget` when over an interactive widget.
 
@@ -100,7 +98,7 @@ A handler can return:
 - Any plain value to replace application state.
 - An action record containing one or more of `state`, `view`, and `quit`.
 
-Ctrl-C always exits. Escape exits unless `quit-on-esc` is false.
+Ctrl-C always exits. Escape exits unless `--quit-on-esc` is false.
 
 ## Widgets
 

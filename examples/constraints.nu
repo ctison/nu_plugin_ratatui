@@ -13,11 +13,11 @@ let rows = $examples | each { |example|
   {type: layout direction: horizontal constraints: $example.constraints children: $cells}
 }
 
-tui run {
-  view: {
+(tui
+  {
     type: layout
     direction: vertical
     constraints: [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 1} {fill: 1}]
     children: ([{type: paragraph text: "Constraint examples — resize the terminal to see them react" alignment: center style: {bold: true}}] | append $rows)
   }
-}
+)

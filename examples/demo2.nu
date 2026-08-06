@@ -2,10 +2,10 @@
 # Use h/l or arrow keys to move between application tabs.
 let weather = [{label: Mon value: 72} {label: Tue value: 68} {label: Wed value: 75} {label: Thu value: 81} {label: Fri value: 77}]
 
-tui run {
-  state: {tab: 0}
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {tab: 0}
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "h" | "left" => {state: ($event.state | update tab ([0 ($event.state.tab - 1)] | math max))}
@@ -13,7 +13,7 @@ tui run {
       _ => null
     }
   }
-  view: { |app|
+  { |app|
     let panel = match $app.tab {
       0 => {type: paragraph text: "Ratatui Demo2\n\nA dashboard-style showcase built entirely from Nushell records.\n\nThe upstream example uses rich custom rendering; this port retains its five-tab application structure." alignment: center border: true title: " About " style: {fg: "#e2e8f0" bg: "#0f172a"}}
       1 => {type: list items: ["● release@ratatui.rs — Version 0.30 is out" "○ team@example.com — Design review" "○ ci@example.com — Build succeeded" "○ community@example.com — Weekly digest"] title: " Email " border: true border-type: rounded border-style: {fg: cyan}}
@@ -32,4 +32,4 @@ tui run {
       ]
     }
   }
-}
+)

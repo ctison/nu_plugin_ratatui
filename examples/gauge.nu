@@ -1,10 +1,10 @@
 # Port of Ratatui's examples/apps/gauge using only plugin widgets.
 # Press Enter or Space to start the gauges, r to reset, and q to quit.
-tui run {
-  state: {running: false progress: 0}
-  tick-rate-ms: 50
-  quit-on-esc: false
-  on-key: { |event|
+(tui
+  --state {running: false progress: 0}
+  --tick-rate-ms 50
+  --quit-on-esc false
+  --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
       "enter" | " " => {state: ($event.state | update running true)}
@@ -12,12 +12,12 @@ tui run {
       _ => null
     }
   }
-  on-event: { |event|
+  --on-event { |event|
     if $event.type == tick and $event.state.running and $event.state.progress < 100 {
       {state: ($event.state | update progress ($event.state.progress + 1))}
     }
   }
-  view: { |app|
+  { |app|
     let ratio = $app.progress / 100
     {
       type: layout
@@ -74,4 +74,4 @@ tui run {
       ]
     }
   }
-}
+)
