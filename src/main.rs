@@ -10,5 +10,5 @@ use plugin::TuiPlugin;
 
 /// Starts the Nushell plugin protocol loop.
 fn main() {
-    serve_plugin(&TuiPlugin, MsgPackSerializer);
+  serve_plugin(&TuiPlugin, MsgPackSerializer);
 }
