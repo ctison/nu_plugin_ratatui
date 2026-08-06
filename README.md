@@ -1,6 +1,6 @@
-# nu_plugin_tui
+# nu_plugin_ratatui
 
-`nu_plugin_tui` exposes [Ratatui](https://ratatui.rs/) as declarative Nushell commands. Build a widget tree with Nu records, keep application state as any Nu value, and use ordinary Nu closures for click and keyboard handlers.
+`nu_plugin_ratatui` exposes [Ratatui](https://ratatui.rs/) as declarative Nushell commands. Build a widget tree with Nu records, keep application state as any Nu value, and use ordinary Nu closures for click and keyboard handlers.
 
 Detailed guides and reference material are available in [`doc/`](doc/README.md).
 
@@ -10,7 +10,7 @@ The plugin targets Nushell 0.114.1.
 
 ```nu
 cargo build
-nu --plugins target/debug/nu_plugin_tui examples/counter.nu
+nu --plugins target/debug/nu_plugin_ratatui examples/counter.nu
 ```
 
 This one-shot command does not modify your plugin registry.
@@ -37,7 +37,7 @@ Run these commands at a Nushell prompt:
 
 ```nu
 cargo build --release
-plugin add (pwd | path join target release nu_plugin_tui)
+plugin add (pwd | path join target release nu_plugin_ratatui)
 ```
 
 Wait for `plugin add` to finish. Then, at the **next prompt**, run:
@@ -78,6 +78,8 @@ tui run {
 ```
 
 `tui run` returns the final state, so the example evaluates to the click count after the UI closes. A complete runnable version is in [`examples/counter.nu`](examples/counter.nu).
+
+The [`examples/`](examples/README.md) gallery also contains dependency-free Nushell ports of 26 applications from Ratatui's upstream examples.
 
 ## Application record
 

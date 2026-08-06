@@ -13,7 +13,7 @@ cargo build
 Then let Nushell load that binary for one process:
 
 ```sh
-nu --plugins target/debug/nu_plugin_tui examples/counter.nu
+nu --plugins target/debug/nu_plugin_ratatui examples/counter.nu
 ```
 
 This does not change the Nushell plugin registry.
@@ -29,7 +29,7 @@ cargo build --release
 At a Nushell prompt, register it:
 
 ```nu
-plugin add (pwd | path join target release nu_plugin_tui)
+plugin add (pwd | path join target release nu_plugin_ratatui)
 ```
 
 Wait for registration to finish. At the next prompt, run the example:

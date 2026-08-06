@@ -1,6 +1,6 @@
-# nu_plugin_tui documentation
+# nu_plugin_ratatui documentation
 
-`nu_plugin_tui` lets Nushell scripts describe and run terminal user interfaces with records and closures.
+`nu_plugin_ratatui` lets Nushell scripts describe and run terminal user interfaces with records and closures.
 
 ## Guides
 

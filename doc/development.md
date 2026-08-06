@@ -26,7 +26,7 @@ Build the plugin and run the example through a one-process plugin declaration:
 
 ```sh
 cargo build
-nu --plugins target/debug/nu_plugin_tui examples/counter.nu
+nu --plugins target/debug/nu_plugin_ratatui examples/counter.nu
 ```
 
 The interactive example requires a real terminal. Automated Rust tests use Ratatui's test backend and do not enter raw terminal mode.
