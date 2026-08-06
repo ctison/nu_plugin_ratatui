@@ -17,13 +17,11 @@
     let show_surrounding = $app.style-index in [2 3]
     let style_name = [Default "Weekday headers" "Surrounding dates" "Headers + surrounding"] | get $app.style-index
     let months = 1..12 | each { |month|
-      mut calendar = {
-        type: calendar
-        year: $app.year
-        month: $month
-        month-style: {fg: cyan bold: true}
-        style: {fg: white bg: "#323232" bold: true}
-      }
+      mut calendar = (tui calendar
+        --year $app.year
+        --month $month
+        --month-style {fg: cyan bold: true}
+        --style {fg: white bg: "#323232" bold: true})
       if $show_weekdays {
         $calendar = $calendar | insert weekday-style {fg: green bold: true}
       }
@@ -33,18 +31,14 @@
       $calendar
     }
     let rows = $months | chunks 4 | each { |row|
-      {type: layout direction: horizontal children: $row}
+      tui layout --direction horizontal --children $row
     }
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 3} {fill: 1} {fill: 1} {fill: 1}]
-      children: ([{
-        type: paragraph
-        text: $"Calendar Example — ($app.year) — ($style_name)\nn/p year • s style • q quit"
-        alignment: center
-        style: {bold: true}
-      }] | append $rows)
-    }
+    (tui layout
+      --direction vertical
+      --constraints [{length: 3} {fill: 1} {fill: 1} {fill: 1}]
+      --children ([(tui paragraph
+        --text $"Calendar Example — ($app.year) — ($style_name)\nn/p year • s style • q quit"
+        --alignment center
+        --style {bold: true})] | append $rows))
   }
 )

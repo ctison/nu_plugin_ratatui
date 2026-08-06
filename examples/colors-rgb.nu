@@ -20,19 +20,15 @@ let colors = [
     let rows = 0..11 | each { |row|
       let value = 255 - ($row * 18)
       let cells = $palette | each { |color|
-        {type: fill symbol: "▀" style: {fg: $color bg: $color bold: ($value > 150)}}
+        tui fill --symbol "▀" --style {fg: $color bg: $color bold: ($value > 150)}
       }
-      {type: layout direction: horizontal children: $cells}
+      tui layout --direction horizontal --children $cells
     }
-    {
-      type: layout
-      direction: vertical
-      constraints: ([{length: 1}] | append (0..11 | each { {fill: 1} }))
-      children: ([{
-        type: paragraph
-        text: "colors_rgb example — press any key to quit"
-        alignment: center
-      }] | append $rows)
-    }
+    (tui layout
+      --direction vertical
+      --constraints ([{length: 1}] | append (0..11 | each { {fill: 1} }))
+      --children ([(tui paragraph
+        --text "colors_rgb example — press any key to quit"
+        --alignment center)] | append $rows))
   }
 )

@@ -44,16 +44,14 @@ let initial_items = [
     } else {
       "Nothing selected..."
     }
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 2} {fill: 1} {fill: 1} {length: 1}]
-      children: [
-        {type: paragraph text: "Ratatui Todo List Example" alignment: center style: {fg: "#e2e8f0" bg: "#1e40af" bold: true}}
-        {type: list items: $labels title: " TODO List " border: true border-style: {fg: "#1e40af"} style: {fg: "#e2e8f0" bg: "#020617"}}
-        {type: paragraph text: $info title: " TODO Info " border: true border-style: {fg: "#1e40af"} style: {fg: "#e2e8f0" bg: "#020617"}}
-        {type: paragraph text: "↓↑ move • ← unselect • → toggle • g/G top/bottom • q quit" alignment: center}
-      ]
-    }
+    (tui layout
+      --direction vertical
+      --constraints [{length: 2} {fill: 1} {fill: 1} {length: 1}]
+      --children [
+        (tui paragraph --text "Ratatui Todo List Example" --alignment center --style {fg: "#e2e8f0" bg: "#1e40af" bold: true})
+        (tui list --items $labels --title " TODO List " --border true --border-style {fg: "#1e40af"} --style {fg: "#e2e8f0" bg: "#020617"})
+        (tui paragraph --text $info --title " TODO Info " --border true --border-style {fg: "#1e40af"} --style {fg: "#e2e8f0" bg: "#020617"})
+        (tui paragraph --text "↓↑ move • ← unselect • → toggle • g/G top/bottom • q quit" --alignment center)
+      ])
   }
 )

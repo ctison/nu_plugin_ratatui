@@ -37,14 +37,12 @@ let palettes = [cyan magenta yellow green]
         {x: ($rotated_x * 10) y: (($yf * 7) + ($depth * $app.tilt * 5)) color: $color}
       }
     } | flatten
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 2} {fill: 1}]
-      children: [
-        {type: paragraph text: $"Volatility Surface — arrows rotate • p palette • Space pause • q quit($app.paused | if $in { ' [PAUSED]' } else { '' })" alignment: center style: {bold: true}}
-        {type: canvas points: $points x-bounds: [-60 60] y-bounds: [-45 45] marker: braille title: " Implied volatility point cloud " border: true border-type: rounded}
-      ]
-    }
+    (tui layout
+      --direction vertical
+      --constraints [{length: 2} {fill: 1}]
+      --children [
+        (tui paragraph --text $"Volatility Surface — arrows rotate • p palette • Space pause • q quit($app.paused | if $in { ' [PAUSED]' } else { '' })" --alignment center --style {bold: true})
+        (tui canvas --points $points --x-bounds [-60 60] --y-bounds [-45 45] --marker braille --title " Implied volatility point cloud " --border true --border-type rounded)
+      ])
   }
 )

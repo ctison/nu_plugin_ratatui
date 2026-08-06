@@ -26,35 +26,29 @@
       let y = (($x + $app.phase) * 0.14 | math cos) * 3 + 5
       [($x + $app.offset) $y]
     }
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 2} {fill: 1}]
-      children: [
-        {
-          type: paragraph
-          text: "Chart Example — h/l pan • q quit"
-          alignment: center
-          style: {fg: cyan bold: true}
-        }
-        {
-          type: chart
-          title: " Animated signals "
-          border: true
-          border-type: rounded
-          datasets: [
+    (tui layout
+      --direction vertical
+      --constraints [{length: 2} {fill: 1}]
+      --children [
+        (tui paragraph
+          --text "Chart Example — h/l pan • q quit"
+          --alignment center
+          --style {fg: cyan bold: true})
+        (tui chart
+          --title " Animated signals "
+          --border true
+          --border-type rounded
+          --datasets [
             {name: sine data: $wave graph-type: line marker: braille style: {fg: cyan}}
             {name: cosine data: $wave2 graph-type: scatter marker: dot style: {fg: yellow}}
           ]
-          x-axis: {
+          --x-axis {
             title: "x"
             bounds: [$app.offset ($app.offset + 40)]
             labels: [$"($app.offset)" $"($app.offset + 20)" $"($app.offset + 40)"]
             style: {fg: gray}
           }
-          y-axis: {title: "y" bounds: [0 10] labels: ["0" "5" "10"] style: {fg: gray}}
-        }
-      ]
-    }
+          --y-axis {title: "y" bounds: [0 10] labels: ["0" "5" "10"] style: {fg: gray}})
+      ])
   }
 )

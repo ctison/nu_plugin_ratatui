@@ -44,15 +44,13 @@
     let after = $app.input | skip $app.cursor | str join
     let cursor = if $app.mode == editing { "▏" } else { "" }
     let messages = $app.messages | enumerate | each { |message| $"($message.index): ($message.item)" }
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 1} {length: 3} {fill: 1}]
-      children: [
-        {type: paragraph text: $help style: {bold: ($app.mode == normal)}}
-        {type: paragraph text: $"($before)($cursor)($after)" title: " Input " border: true style: {fg: (if $app.mode == editing {"yellow"} else {"white"})}}
-        {type: list items: $messages title: " Messages " border: true}
-      ]
-    }
+    (tui layout
+      --direction vertical
+      --constraints [{length: 1} {length: 3} {fill: 1}]
+      --children [
+        (tui paragraph --text $help --style {bold: ($app.mode == normal)})
+        (tui paragraph --text $"($before)($cursor)($after)" --title " Input " --border true --style {fg: (if $app.mode == editing {"yellow"} else {"white"})})
+        (tui list --items $messages --title " Messages " --border true)
+      ])
   }
 )

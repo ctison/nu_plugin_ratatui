@@ -26,23 +26,19 @@ let axes = (-100..100 | each { |x| {x: $x y: 0 color: dark_gray} }) | append (-5
   { |app|
     let marker = [dot braille block half-block quadrant sextant octant bar] | get $app.marker-index
     let points = $axes | append $circle | append $wave | append [{x: $app.x y: $app.y color: yellow}]
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 2} {fill: 1}]
-      children: [
-        {type: paragraph text: $"Canvas Example — marker: ($marker) • Enter marker • hjkl move • q quit" alignment: center style: {bold: true}}
-        {
-          type: canvas
-          points: $points
-          x-bounds: [-100 100]
-          y-bounds: [-50 50]
-          marker: $marker
-          title: " Shapes and points "
-          border: true
-          border-type: rounded
-        }
-      ]
-    }
+    (tui layout
+      --direction vertical
+      --constraints [{length: 2} {fill: 1}]
+      --children [
+        (tui paragraph --text $"Canvas Example — marker: ($marker) • Enter marker • hjkl move • q quit" --alignment center --style {bold: true})
+        (tui canvas
+          --points $points
+          --x-bounds [-100 100]
+          --y-bounds [-50 50]
+          --marker $marker
+          --title " Shapes and points "
+          --border true
+          --border-type rounded)
+      ])
   }
 )

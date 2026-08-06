@@ -17,14 +17,12 @@
     }
   }
   { |app|
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 2} {fill: 1}]
-      children: [
-        {type: paragraph text: $"Mouse Drawing — drag to draw • c clear • q quit • ($app.points | length) points" alignment: center style: {bold: true}}
-        {type: canvas points: $app.points x-bounds: [0 200] y-bounds: [0 100] marker: braille title: " Draw here " border: true border-type: rounded}
-      ]
-    }
+    (tui layout
+      --direction vertical
+      --constraints [{length: 2} {fill: 1}]
+      --children [
+        (tui paragraph --text $"Mouse Drawing — drag to draw • c clear • q quit • ($app.points | length) points" --alignment center --style {bold: true})
+        (tui canvas --points $app.points --x-bounds [0 200] --y-bounds [0 100] --marker braille --title " Draw here " --border true --border-type rounded)
+      ])
   }
 )

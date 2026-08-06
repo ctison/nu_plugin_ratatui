@@ -8,27 +8,21 @@ let rows = 0..15 | each { |row|
     } else {
       "black"
     }
-    {
-      type: paragraph
-      text: ($index | into string | fill --alignment right --width 3)
-      alignment: center
-      style: {fg: $foreground bg: $index}
-    }
+    (tui paragraph
+      --text ($index | into string | fill --alignment right --width 3)
+      --alignment center
+      --style {fg: $foreground bg: $index})
   }
-  {type: layout direction: horizontal children: $cells}
+  tui layout --direction horizontal --children $cells
 }
 
 (tui
-  {
-    type: layout
-    direction: vertical
-    constraints: ([{length: 2}] | append (0..15 | each { {fill: 1} }))
-    children: ([{
-      type: paragraph
-      text: "Ratatui indexed color explorer — press any key to exit"
-      alignment: center
-      style: {bold: true}
-    }] | append $rows)
-  }
+  (tui layout
+    --direction vertical
+    --constraints ([{length: 2}] | append (0..15 | each { {fill: 1} }))
+    --children ([(tui paragraph
+      --text "Ratatui indexed color explorer — press any key to exit"
+      --alignment center
+      --style {bold: true})] | append $rows))
   --on-key { |event| {state: $event.state quit: true} }
 )

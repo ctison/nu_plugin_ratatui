@@ -12,27 +12,23 @@
   }
   { |app|
     if $app.visible {
-      {
-        type: layout
-        direction: vertical
-        constraints: [{fill: 1} {length: 7} {fill: 1}]
-        children: [
-          {type: spacer}
-          {
-            type: layout
-            direction: horizontal
-            constraints: [{fill: 1} {percentage: 50} {fill: 1}]
-            children: [
-              {type: spacer}
-              {type: paragraph text: "This is a centered popup.\n\nPress p to close it." title: " Popup " border: true border-type: double alignment: center style: {fg: white bg: "#1e293b"} border-style: {fg: cyan}}
-              {type: spacer}
-            ]
-          }
-          {type: spacer}
-        ]
-      }
+      (tui layout
+        --direction vertical
+        --constraints [{fill: 1} {length: 7} {fill: 1}]
+        --children [
+          (tui spacer)
+          (tui layout
+            --direction horizontal
+            --constraints [{fill: 1} {percentage: 50} {fill: 1}]
+            --children [
+              (tui spacer)
+              (tui paragraph --text "This is a centered popup.\n\nPress p to close it." --title " Popup " --border true --border-type double --alignment center --style {fg: white bg: "#1e293b"} --border-style {fg: cyan})
+              (tui spacer)
+            ])
+          (tui spacer)
+        ])
     } else {
-      {type: paragraph text: "Popup Example\n\nPress p to open a centered popup, q to quit." alignment: center border: true title: " Background " style: {fg: gray}}
+      tui paragraph --text "Popup Example\n\nPress p to open a centered popup, q to quit." --alignment center --border true --title " Background " --style {fg: gray}
     }
   }
 )

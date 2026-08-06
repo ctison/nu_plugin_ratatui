@@ -19,24 +19,20 @@ let bars = $temperatures | enumerate | each { |sample|
 }
 
 (tui
-  {
-    type: layout
-    direction: vertical
-    constraints: [{length: 2} {fill: 1} {length: 1}]
-    children: [
-      {type: paragraph text: "Weather demo" alignment: center style: {bold: true}}
-      {
-        type: bar-chart
-        bars: $bars
-        max: 90
-        bar-width: 3
-        bar-gap: 1
-        value-style: {reversed: true}
-        label-style: {fg: gray}
-        border: true
-        title: " Hourly temperature (°F) "
-      }
-      {type: paragraph text: "00                                      12                                      23" alignment: center style: {fg: dark_gray}}
-    ]
-  }
+  (tui layout
+    --direction vertical
+    --constraints [{length: 2} {fill: 1} {length: 1}]
+    --children [
+      (tui paragraph --text "Weather demo" --alignment center --style {bold: true})
+      (tui bar-chart
+        --bars $bars
+        --max 90
+        --bar-width 3
+        --bar-gap 1
+        --value-style {reversed: true}
+        --label-style {fg: gray}
+        --border true
+        --title " Hourly temperature (°F) ")
+      (tui paragraph --text "00                                      12                                      23" --alignment center --style {fg: dark_gray})
+    ])
 )

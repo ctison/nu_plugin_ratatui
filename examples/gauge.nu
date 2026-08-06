@@ -19,59 +19,24 @@
   }
   { |app|
     let ratio = $app.progress / 100
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 1} {length: 1}]
-      children: [
-        {
-          type: paragraph
-          text: "Ratatui Gauge Example"
-          alignment: center
-          style: {fg: "#cbd5e1" bold: true}
-        }
-        {
-          type: gauge
-          ratio: $ratio
-          label: $"($app.progress)%"
-          title: " Gauge with percentage "
-          gauge-style: {fg: "#991b1b"}
-          border: true
-        }
-        {
-          type: gauge
-          ratio: $ratio
-          label: $"($app.progress).0/100"
-          title: " Gauge with ratio and custom label "
-          gauge-style: {fg: "#166534" bold: true italic: true}
-          border: true
-        }
-        {
-          type: line-gauge
-          ratio: $ratio
-          label: $"($app.progress)%"
-          title: " Line gauge "
-          filled-style: {fg: "#1e40af"}
-          border: true
-        }
-        {
-          type: line-gauge
-          ratio: $ratio
-          label: $"($app.progress)%"
-          title: " Unicode line gauge "
-          filled-symbol: "━"
-          unfilled-symbol: "─"
-          filled-style: {fg: "#9a3412" bold: true}
-          unfilled-style: {fg: dark_gray}
-          border: true
-        }
-        {
-          type: paragraph
-          text: "Enter/Space start • r reset • q quit"
-          alignment: center
-          style: {fg: "#cbd5e1"}
-        }
-      ]
-    }
+    (tui layout
+      --direction vertical
+      --constraints [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 1} {length: 1}]
+      --children [
+        (tui paragraph --text "Ratatui Gauge Example" --alignment center --style {fg: "#cbd5e1" bold: true})
+        (tui gauge --ratio $ratio --label $"($app.progress)%" --title " Gauge with percentage " --gauge-style {fg: "#991b1b"} --border true)
+        (tui gauge --ratio $ratio --label $"($app.progress).0/100" --title " Gauge with ratio and custom label " --gauge-style {fg: "#166534" bold: true italic: true} --border true)
+        (tui line-gauge --ratio $ratio --label $"($app.progress)%" --title " Line gauge " --filled-style {fg: "#1e40af"} --border true)
+        (tui line-gauge
+          --ratio $ratio
+          --label $"($app.progress)%"
+          --title " Unicode line gauge "
+          --filled-symbol "━"
+          --unfilled-symbol "─"
+          --filled-style {fg: "#9a3412" bold: true}
+          --unfilled-style {fg: dark_gray}
+          --border true)
+        (tui paragraph --text "Enter/Space start • r reset • q quit" --alignment center --style {fg: "#cbd5e1"})
+      ])
   }
 )

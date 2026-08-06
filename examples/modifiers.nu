@@ -10,27 +10,21 @@ let samples = [
 let colors = [black dark_gray gray white red]
 let rows = $colors | each { |background|
   let cells = $samples | each { |sample|
-    {
-      type: paragraph
-      text: $sample.name
-      alignment: center
-      style: ($sample.style | merge {fg: white bg: $background})
-    }
+    (tui paragraph
+      --text $sample.name
+      --alignment center
+      --style ($sample.style | merge {fg: white bg: $background}))
   }
-  {type: layout direction: horizontal children: $cells}
+  tui layout --direction horizontal --children $cells
 }
 
 (tui
-  {
-    type: layout
-    direction: vertical
-    constraints: [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 1} {fill: 1}]
-    children: ([{
-      type: paragraph
-      text: "Not every terminal supports every modifier — press any key to exit"
-      alignment: center
-      style: {fg: red bold: true}
-    }] | append $rows)
-  }
+  (tui layout
+    --direction vertical
+    --constraints [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 1} {fill: 1}]
+    --children ([(tui paragraph
+      --text "Not every terminal supports every modifier — press any key to exit"
+      --alignment center
+      --style {fg: red bold: true})] | append $rows))
   --on-key { |event| {state: $event.state quit: true} }
 )

@@ -1,10 +1,8 @@
 # Port of Ratatui's examples/apps/minimal.
 # Run with `nu --plugins target/debug/nu_plugin_ratatui examples/minimal.nu`.
 (tui
-  {
-    type: paragraph
-    text: "Hello Ratatui! (press Esc to quit)"
-    style: {fg: cyan bold: true}
-    alignment: center
-  }
+  (tui paragraph
+    --text "Hello Ratatui! (press Esc to quit)"
+    --style {fg: cyan bold: true}
+    --alignment center)
 )

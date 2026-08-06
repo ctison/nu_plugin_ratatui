@@ -9,25 +9,21 @@ let rows = [
 ]
 
 (tui
-  {
-    type: layout
-    direction: vertical
-    constraints: [{length: 2} {fill: 1} {length: 1}]
-    children: [
-      {type: paragraph text: "Ratatui Table Example" alignment: center style: {fg: cyan bold: true}}
-      {
-        type: table
-        header: [Name Address Email]
-        rows: $rows
-        widths: [{percentage: 25} {percentage: 40} {percentage: 35}]
-        column-spacing: 2
-        title: " People "
-        border: true
-        border-type: rounded
-        border-style: {fg: cyan}
-        style: {fg: white}
-      }
-      {type: paragraph text: "Press Esc to quit" alignment: center style: {fg: dark_gray}}
-    ]
-  }
+  (tui layout
+    --direction vertical
+    --constraints [{length: 2} {fill: 1} {length: 1}]
+    --children [
+      (tui paragraph --text "Ratatui Table Example" --alignment center --style {fg: cyan bold: true})
+      (tui table
+        --header [Name Address Email]
+        --rows $rows
+        --widths [{percentage: 25} {percentage: 40} {percentage: 35}]
+        --column-spacing 2
+        --title " People "
+        --border true
+        --border-type rounded
+        --border-style {fg: cyan}
+        --style {fg: white})
+      (tui paragraph --text "Press Esc to quit" --alignment center --style {fg: dark_gray})
+    ])
 )

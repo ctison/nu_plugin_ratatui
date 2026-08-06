@@ -18,31 +18,25 @@ let kinds = [length percentage min max fill]
   { |app|
     let kind = $kinds | get $app.selected
     let constraint = {} | insert $kind $app.amount
-    let tabs = {
-      type: tabs
-      titles: $kinds
-      selected: $app.selected
-      highlight-style: {fg: yellow bold: true reversed: true}
-      border: true
-      title: " Constraints — h/l select • j/k adjust • q quit "
-    }
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 3} {length: 3} {fill: 1}]
-      children: [
+    let tabs = (tui tabs
+      --titles $kinds
+      --selected $app.selected
+      --highlight-style {fg: yellow bold: true reversed: true}
+      --border true
+      --title " Constraints — h/l select • j/k adjust • q quit ")
+    (tui layout
+      --direction vertical
+      --constraints [{length: 3} {length: 3} {fill: 1}]
+      --children [
         $tabs
-        {type: paragraph text: $"($kind): ($app.amount)" alignment: center style: {fg: cyan bold: true}}
-        {
-          type: layout
-          direction: horizontal
-          constraints: [$constraint {fill: 1}]
-          children: [
-            {type: paragraph text: $"($kind)\n($app.amount)" alignment: center border: true border-style: {fg: cyan} style: {bg: "#1e3a8a"}}
-            {type: paragraph text: "Fill(1)" alignment: center border: true border-style: {fg: dark_gray} style: {bg: "#0f172a"}}
-          ]
-        }
-      ]
-    }
+        (tui paragraph --text $"($kind): ($app.amount)" --alignment center --style {fg: cyan bold: true})
+        (tui layout
+          --direction horizontal
+          --constraints [$constraint {fill: 1}]
+          --children [
+            (tui paragraph --text $"($kind)\n($app.amount)" --alignment center --border true --border-style {fg: cyan} --style {bg: "#1e3a8a"})
+            (tui paragraph --text "Fill(1)" --alignment center --border true --border-style {fg: dark_gray} --style {bg: "#0f172a"})
+          ])
+      ])
   }
 )

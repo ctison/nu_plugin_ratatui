@@ -45,20 +45,16 @@
     let values = [($form.first-name | str join) ($form.last-name | str join) ($form.age | into string)]
     let labels = ["First Name" "Last Name" "Age"]
     let fields = 0..2 | each { |index|
-      {
-        type: paragraph
-        text: ($values | get $index)
-        title: $" ($labels | get $index) "
-        border: true
-        border-type: rounded
-        border-style: {fg: (if $form.focus == $index {"yellow"} else {"dark_gray"}) bold: ($form.focus == $index)}
-      }
+      (tui paragraph
+        --text ($values | get $index)
+        --title $" ($labels | get $index) "
+        --border true
+        --border-type rounded
+        --border-style {fg: (if $form.focus == $index {"yellow"} else {"dark_gray"}) bold: ($form.focus == $index)})
     }
-    {
-      type: layout
-      direction: vertical
-      constraints: [{length: 2} {length: 3} {length: 3} {length: 3} {fill: 1}]
-      children: ([{type: paragraph text: "Input Form — Tab focus • Enter submit • Esc cancel" alignment: center style: {bold: true}}] | append $fields | append [{type: spacer}])
-    }
+    (tui layout
+      --direction vertical
+      --constraints [{length: 2} {length: 3} {length: 3} {length: 3} {fill: 1}]
+      --children ([(tui paragraph --text "Input Form — Tab focus • Enter submit • Esc cancel" --alignment center --style {bold: true})] | append $fields | append [(tui spacer)]))
   }
 )
