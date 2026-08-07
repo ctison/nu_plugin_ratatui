@@ -2,19 +2,19 @@
 
 Every widget is a Nushell record with a `type` field. A `layout` combines widgets into a tree; any other widget can also be the root view.
 
-Every widget also has a `tui <type>` constructor. Record fields become named flags, required fields become required flags, and every constructor returns a validated record that can be nested or passed as `tui`'s positional view:
+Every widget also has a `tui <type>` constructor. Required record fields become positional parameters, optional fields become named flags, and every constructor returns a validated record that can be nested or passed as `tui`'s positional view:
 
 ```nu
-let message = tui paragraph --text "Ready" --alignment center
-let meter = tui gauge --ratio 0.75 --label "75%" --gauge-style {fg: cyan}
+let message = tui paragraph "Ready" --alignment center
+let meter = tui gauge 0.75 --label "75%" --gauge-style {fg: cyan}
 
-let view = tui layout --direction vertical --children [$message $meter]
+let view = tui layout [$message $meter] --direction vertical
 tui $view
 ```
 
-Boolean fields accept explicit values, such as `--border true` or `--wrap false`. Optional flags omitted from a constructor are also omitted from its record, allowing the runtime defaults documented below to apply.
+Boolean fields are switches. Use a bare flag such as `--border` for `true`, or an equals value such as `--wrap=false` for `false`. Optional flags omitted from a constructor are also omitted from its record, allowing the runtime defaults documented below to apply.
 
-Ratatui's 17 built-ins are exposed as `bar-chart`, `block`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`. The plugin also provides `layout`, `button`, and `spacer` for composition and interaction. The exact Ratatui struct-name aliases `monthly`, `ratatui-logo`, and `ratatui-mascot` are also accepted as record types.
+Ratatui's 16 content widgets are exposed as `bar-chart`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`. The plugin also provides `layout`, `button`, and `spacer` for composition and interaction. The exact Ratatui struct-name aliases `monthly`, `ratatui-logo`, and `ratatui-mascot` are also accepted as record types.
 
 ## Layout
 
@@ -134,14 +134,6 @@ A spacer reserves the area assigned by its parent layout without drawing anythin
 
 ```nu
 {type: bar-chart bars: [{label: A value: 3} {label: B value: 8}] bar-width: 3 border: true}
-```
-
-## Block
-
-A standalone Ratatui block uses only the [presentation fields](#presentation-fields). Its `border` defaults to `true`.
-
-```nu
-{type: block title: " Panel " border-type: rounded border-style: {fg: cyan}}
 ```
 
 ## Calendar
@@ -272,7 +264,7 @@ The Ratatui mascot is 32 cells wide by 16 cells high. `blink: true` renders its 
 
 ## Presentation fields
 
-All block-wrapped widgets accept these fields: bar charts, blocks, buttons, calendars, canvases, charts, gauges, line gauges, lists, paragraphs, sparklines, tables, and tabs.
+All block-wrapped widgets accept these fields: bar charts, buttons, calendars, canvases, charts, gauges, line gauges, lists, paragraphs, sparklines, tables, and tabs.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -295,3 +287,14 @@ A style record supports:
 | `dim` | bool | Enable dim text. |
 
 Colors can be Ratatui color names, six-digit hexadecimal strings such as `#5fd7ff`, or indexed color integers from 0 through 255. Color availability and text modifier rendering depend on the terminal.
+
+### Style constructor
+
+Use `tui style` to create the same record with validated constructor flags:
+
+```nu
+let warning = tui style --fg yellow --bg "#202020" --bold
+tui paragraph "Careful" --style $warning
+```
+
+Every field is optional. Omitted colors use the terminal default, and omitted modifiers default to `false`. `--underline` is accepted as an alias for `--underlined`.

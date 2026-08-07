@@ -2,7 +2,7 @@
 # Tab moves focus, Enter submits, and Escape cancels.
 (tui
   --state {focus: 0 first-name: [] last-name: [] age: 0 result: editing}
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     match $event.code {
       "escape" => {state: ($event.state | update result canceled) quit: true}
@@ -46,15 +46,15 @@
     let labels = ["First Name" "Last Name" "Age"]
     let fields = 0..2 | each { |index|
       (tui paragraph
-        --text ($values | get $index)
+        ($values | get $index)
         --title $" ($labels | get $index) "
-        --border true
+        --border
         --border-type rounded
         --border-style {fg: (if $form.focus == $index {"yellow"} else {"dark_gray"}) bold: ($form.focus == $index)})
     }
     (tui layout
       --direction vertical
       --constraints [{length: 2} {length: 3} {length: 3} {length: 3} {fill: 1}]
-      --children ([(tui paragraph --text "Input Form — Tab focus • Enter submit • Esc cancel" --alignment center --style {bold: true})] | append $fields | append [(tui spacer)]))
+      ([(tui paragraph "Input Form — Tab focus • Enter submit • Esc cancel" --alignment center --style {bold: true})] | append $fields | append [(tui spacer)]))
   }
 )

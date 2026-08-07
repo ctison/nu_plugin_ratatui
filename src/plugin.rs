@@ -1,7 +1,9 @@
 use nu_plugin::{Plugin, PluginCommand};
 
 use crate::{
+  example::TuiExample,
   run::Tui,
+  style::TuiStyle,
   widget::{TuiWidget, WidgetKind},
 };
 
@@ -16,7 +18,8 @@ impl Plugin for TuiPlugin {
 
   /// Returns the commands exported by this plugin.
   fn commands(&self) -> Vec<Box<dyn PluginCommand<Plugin = Self>>> {
-    let mut commands: Vec<Box<dyn PluginCommand<Plugin = Self>>> = vec![Box::new(Tui)];
+    let mut commands: Vec<Box<dyn PluginCommand<Plugin = Self>>> =
+      vec![Box::new(Tui), Box::new(TuiExample), Box::new(TuiStyle)];
     commands.extend(
       WidgetKind::ALL
         .map(TuiWidget::new)
@@ -42,6 +45,8 @@ mod tests {
       .collect::<Vec<_>>();
 
     assert!(names.iter().any(|name| name == "tui"));
+    assert!(names.iter().any(|name| name == "tui example"));
+    assert!(names.iter().any(|name| name == "tui style"));
     assert!(!names.iter().any(|name| name == "tui run"));
   }
 }

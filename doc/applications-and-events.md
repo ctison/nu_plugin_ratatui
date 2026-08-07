@@ -96,7 +96,7 @@ Ctrl-C always closes the application after handlers run. Escape also closes it w
 ```nu
 (tui
   --state 0
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     match $event.code {
       "+" => ($event.state + 1)

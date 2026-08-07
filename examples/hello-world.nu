@@ -4,11 +4,11 @@
   (tui layout
     --direction vertical
     --constraints [{fill: 1} {length: 3} {fill: 1}]
-    --children [
+    [
       (tui spacer)
       (tui paragraph
-        --text "Hello World!"
-        --border true
+        "Hello World!"
+        --border
         --border-type rounded
         --border-style {fg: cyan}
         --style {fg: white bold: true}

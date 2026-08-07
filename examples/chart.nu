@@ -3,7 +3,7 @@
 (tui
   --state {offset: 0 phase: 0}
   --tick-rate-ms 80
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
@@ -29,16 +29,16 @@
     (tui layout
       --direction vertical
       --constraints [{length: 2} {fill: 1}]
-      --children [
+      [
         (tui paragraph
-          --text "Chart Example — h/l pan • q quit"
+          "Chart Example — h/l pan • q quit"
           --alignment center
           --style {fg: cyan bold: true})
         (tui chart
           --title " Animated signals "
-          --border true
+          --border
           --border-type rounded
-          --datasets [
+          [
             {name: sine data: $wave graph-type: line marker: braille style: {fg: cyan}}
             {name: cosine data: $wave2 graph-type: scatter marker: dot style: {fg: yellow}}
           ]

@@ -22,13 +22,13 @@ let colors = [
       let cells = $palette | each { |color|
         tui fill --symbol "▀" --style {fg: $color bg: $color bold: ($value > 150)}
       }
-      tui layout --direction horizontal --children $cells
+      tui layout --direction horizontal $cells
     }
     (tui layout
       --direction vertical
       --constraints ([{length: 1}] | append (0..11 | each { {fill: 1} }))
-      --children ([(tui paragraph
-        --text "colors_rgb example — press any key to quit"
+      ([(tui paragraph
+        "colors_rgb example — press any key to quit"
         --alignment center)] | append $rows))
   }
 )

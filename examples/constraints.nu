@@ -8,14 +8,14 @@ let examples = [
 ]
 let rows = $examples | each { |example|
   let cells = $example.colors | enumerate | each { |color|
-    tui paragraph --text $example.label --alignment center --border true --style {fg: white bg: $color.item}
+    tui paragraph $example.label --alignment center --border --style {fg: white bg: $color.item}
   }
-  tui layout --direction horizontal --constraints $example.constraints --children $cells
+  tui layout --direction horizontal --constraints $example.constraints $cells
 }
 
 (tui
   (tui layout
     --direction vertical
     --constraints [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 1} {fill: 1}]
-    --children ([(tui paragraph --text "Constraint examples — resize the terminal to see them react" --alignment center --style {bold: true})] | append $rows))
+    ([(tui paragraph "Constraint examples — resize the terminal to see them react" --alignment center --style {bold: true})] | append $rows))
 )

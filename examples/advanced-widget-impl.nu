@@ -12,19 +12,19 @@
     (tui layout
       --direction vertical
       --constraints [{length: 2} {fill: 1} {fill: 1}]
-      --children [
-        (tui paragraph --text "Advanced widget implementation patterns" --alignment center --style {bold: true})
+      [
+        (tui paragraph "Advanced widget implementation patterns" --alignment center --style {bold: true})
         (tui layout
           --direction horizontal
-          --children [
-            (tui paragraph --text "Owned record\n\nA concrete widget value." --title " Widget " --border true --border-style {fg: cyan} --alignment center)
-            (tui paragraph --text "Shared record\n\nThe same value can be nested." --title " &Widget " --border true --border-style {fg: green} --alignment center)
+          [
+            (tui paragraph "Owned record\n\nA concrete widget value." --title " Widget " --border --border-style {fg: cyan} --alignment center)
+            (tui paragraph "Shared record\n\nThe same value can be nested." --title " &Widget " --border --border-style {fg: green} --alignment center)
           ])
         (tui layout
           --direction horizontal
-          --children [
-            (tui paragraph --text $"Reactive closure\n\nFrame ($app.count)" --title " &mut Widget " --border true --border-style {fg: yellow} --alignment center)
-            (tui gauge --ratio (($app.count mod 20) / 20) --label "separate state" --title " StatefulWidget " --border true --gauge-style {fg: magenta})
+          [
+            (tui paragraph $"Reactive closure\n\nFrame ($app.count)" --title " &mut Widget " --border --border-style {fg: yellow} --alignment center)
+            (tui gauge (($app.count mod 20) / 20) --label "separate state" --title " StatefulWidget " --border --gauge-style {fg: magenta})
           ])
       ])
   }

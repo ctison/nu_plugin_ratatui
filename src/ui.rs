@@ -129,7 +129,6 @@ impl UiNode {
         }
         frame.render_widget(widget, area);
       },
-      Self::Block { block } => frame.render_widget(make_block(block), area),
       Self::Calendar {
         year,
         month,

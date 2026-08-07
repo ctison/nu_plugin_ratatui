@@ -110,9 +110,6 @@ pub enum UiNode {
     value_style: Style,
     label_style: Style,
   },
-  Block {
-    block: BlockSpec,
-  },
   Calendar {
     year: i32,
     month: u8,
@@ -246,9 +243,6 @@ impl UiNode {
       "list" => parse_list(record, value.span()),
       "gauge" => parse_gauge(record, value.span()),
       "bar-chart" => parse_bar_chart(record, value.span()),
-      "block" => Ok(Self::Block {
-        block: parse_block(record, true)?,
-      }),
       "calendar" | "monthly" => parse_calendar(record, value.span()),
       "canvas" => parse_canvas(record, value.span()),
       "chart" => parse_chart(record, value.span()),
@@ -894,7 +888,7 @@ fn parse_string_rows(value: &Value) -> Result<Vec<Vec<String>>, LabeledError> {
 }
 
 /// Parses a style record containing colors and text modifiers.
-fn parse_style(value: Option<&Value>) -> Result<Style, LabeledError> {
+pub(crate) fn parse_style(value: Option<&Value>) -> Result<Style, LabeledError> {
   let Some(value) = value else {
     return Ok(Style::default());
   };
@@ -1160,6 +1154,20 @@ mod tests {
     let error = UiNode::parse(&layout).expect_err("constraints should not match");
 
     assert!(error.labels[0].text.contains("one item per child"));
+  }
+
+  /// Verifies a standalone block is no longer part of the declarative widget schema.
+  #[test]
+  fn rejects_removed_block_widget() {
+    let block = record(vec![("type", Value::test_string("block"))]);
+
+    let error = UiNode::parse(&block).expect_err("block should be unsupported");
+
+    assert!(
+      error.labels[0]
+        .text
+        .contains("unsupported widget type `block`")
+    );
   }
 
   /// Verifies exact Ratatui struct names remain usable as widget aliases.

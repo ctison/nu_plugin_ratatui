@@ -2,7 +2,7 @@
 # Use n/p to change year and s to cycle the calendar presentation.
 (tui
   --state {year: 2026 style-index: 0}
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
@@ -18,8 +18,8 @@
     let style_name = [Default "Weekday headers" "Surrounding dates" "Headers + surrounding"] | get $app.style-index
     let months = 1..12 | each { |month|
       mut calendar = (tui calendar
-        --year $app.year
-        --month $month
+        $app.year
+        $month
         --month-style {fg: cyan bold: true}
         --style {fg: white bg: "#323232" bold: true})
       if $show_weekdays {
@@ -31,13 +31,13 @@
       $calendar
     }
     let rows = $months | chunks 4 | each { |row|
-      tui layout --direction horizontal --children $row
+      tui layout --direction horizontal $row
     }
     (tui layout
       --direction vertical
       --constraints [{length: 3} {fill: 1} {fill: 1} {fill: 1}]
-      --children ([(tui paragraph
-        --text $"Calendar Example — ($app.year) — ($style_name)\nn/p year • s style • q quit"
+      ([(tui paragraph
+        $"Calendar Example — ($app.year) — ($style_name)\nn/p year • s style • q quit"
         --alignment center
         --style {bold: true})] | append $rows))
   }

@@ -5,7 +5,7 @@ let palettes = [cyan magenta yellow green]
 (tui
   --state {angle: 0 tilt: 0.45 palette: 0 paused: false}
   --tick-rate-ms 60
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
@@ -40,9 +40,9 @@ let palettes = [cyan magenta yellow green]
     (tui layout
       --direction vertical
       --constraints [{length: 2} {fill: 1}]
-      --children [
-        (tui paragraph --text $"Volatility Surface — arrows rotate • p palette • Space pause • q quit($app.paused | if $in { ' [PAUSED]' } else { '' })" --alignment center --style {bold: true})
-        (tui canvas --points $points --x-bounds [-60 60] --y-bounds [-45 45] --marker braille --title " Implied volatility point cloud " --border true --border-type rounded)
+      [
+        (tui paragraph $"Volatility Surface — arrows rotate • p palette • Space pause • q quit($app.paused | if $in { ' [PAUSED]' } else { '' })" --alignment center --style {bold: true})
+        (tui canvas $points --x-bounds [-60 60] --y-bounds [-45 45] --marker braille --title " Implied volatility point cloud " --border --border-type rounded)
       ])
   }
 )

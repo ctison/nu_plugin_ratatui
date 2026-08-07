@@ -7,7 +7,6 @@ use crate::{config::UiNode, plugin::TuiPlugin};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum WidgetKind {
   BarChart,
-  Block,
   Calendar,
   Canvas,
   Chart,
@@ -30,9 +29,8 @@ pub(crate) enum WidgetKind {
 
 impl WidgetKind {
   /// Contains every supported widget in command registration order.
-  pub(crate) const ALL: [Self; 20] = [
+  pub(crate) const ALL: [Self; 19] = [
     Self::BarChart,
-    Self::Block,
     Self::Calendar,
     Self::Canvas,
     Self::Chart,
@@ -57,7 +55,6 @@ impl WidgetKind {
   fn record_type(self) -> &'static str {
     match self {
       Self::BarChart => "bar-chart",
-      Self::Block => "block",
       Self::Calendar => "calendar",
       Self::Canvas => "canvas",
       Self::Chart => "chart",
@@ -83,7 +80,6 @@ impl WidgetKind {
   fn command_name(self) -> &'static str {
     match self {
       Self::BarChart => "tui bar-chart",
-      Self::Block => "tui block",
       Self::Calendar => "tui calendar",
       Self::Canvas => "tui canvas",
       Self::Chart => "tui chart",
@@ -109,7 +105,6 @@ impl WidgetKind {
   fn description(self) -> &'static str {
     match self {
       Self::BarChart => "Declare a bar chart widget",
-      Self::Block => "Declare a block widget",
       Self::Calendar => "Declare a monthly calendar widget",
       Self::Canvas => "Declare a canvas widget",
       Self::Chart => "Declare a chart widget",
@@ -131,7 +126,27 @@ impl WidgetKind {
     }
   }
 
-  /// Adds this widget's required and optional record fields as named flags.
+  /// Returns record field names supplied as required positional arguments.
+  fn required_fields(self) -> &'static [&'static str] {
+    match self {
+      Self::BarChart => &["bars"],
+      Self::Calendar => &["year", "month"],
+      Self::Canvas => &["points"],
+      Self::Chart => &["datasets"],
+      Self::Layout => &["children"],
+      Self::Paragraph => &["text"],
+      Self::Button => &["id", "label"],
+      Self::List => &["items"],
+      Self::Gauge | Self::LineGauge => &["ratio"],
+      Self::Scrollbar => &["content-length"],
+      Self::Sparkline => &["data"],
+      Self::Table => &["rows"],
+      Self::Tabs => &["titles"],
+      Self::Clear | Self::Fill | Self::Logo | Self::Mascot | Self::Spacer => &[],
+    }
+  }
+
+  /// Adds required positional fields and optional named fields for this widget.
   fn signature(self, command_name: &str) -> Signature {
     let signature = Signature::build(command_name)
       .input_output_type(Type::Nothing, Type::Record(Default::default()))
@@ -139,210 +154,360 @@ impl WidgetKind {
     match self {
       Self::BarChart => with_presentation(
         signature
-          .required_named("bars", list(record_shape()), "Bar records", None)
+          .required("bars", list(record_shape()), "Bar records")
           .named(
             "direction",
             SyntaxShape::String,
-            "vertical or horizontal",
+            "vertical or horizontal (default: vertical)",
             None,
           )
-          .named("max", SyntaxShape::Int, "Maximum chart value", None)
-          .named("bar-width", SyntaxShape::Int, "Bar width in cells", None)
-          .named("bar-gap", SyntaxShape::Int, "Gap between bars", None)
-          .named("bar-style", record_shape(), "Default bar style", None)
-          .named("value-style", record_shape(), "Value style", None)
-          .named("label-style", record_shape(), "Label style", None),
+          .named(
+            "max",
+            SyntaxShape::Int,
+            "Maximum chart value (default: largest bar value)",
+            None,
+          )
+          .named(
+            "bar-width",
+            SyntaxShape::Int,
+            "Bar width in cells (default: 1)",
+            None,
+          )
+          .named(
+            "bar-gap",
+            SyntaxShape::Int,
+            "Gap between bars (default: 1)",
+            None,
+          )
+          .named(
+            "bar-style",
+            record_shape(),
+            "Default bar style (default: terminal default)",
+            None,
+          )
+          .named(
+            "value-style",
+            record_shape(),
+            "Value style (default: terminal default)",
+            None,
+          )
+          .named(
+            "label-style",
+            record_shape(),
+            "Label style (default: terminal default)",
+            None,
+          ),
+        false,
       ),
-      Self::Block => with_presentation(signature),
       Self::Calendar => with_presentation(
         signature
-          .required_named("year", SyntaxShape::Int, "Calendar year", None)
-          .required_named("month", SyntaxShape::Int, "Month from 1 through 12", None)
-          .named("month-style", record_shape(), "Month header style", None)
+          .required("year", SyntaxShape::Int, "Calendar year")
+          .required("month", SyntaxShape::Int, "Month from 1 through 12")
+          .named(
+            "month-style",
+            record_shape(),
+            "Month header style (default: hidden)",
+            None,
+          )
           .named(
             "weekday-style",
             record_shape(),
-            "Weekday header style",
+            "Weekday header style (default: hidden)",
             None,
           )
           .named(
             "surrounding-style",
             record_shape(),
-            "Surrounding days style",
+            "Surrounding days style (default: hidden)",
             None,
           ),
+        false,
       ),
       Self::Canvas => with_presentation(
         signature
-          .required_named("points", list(record_shape()), "Canvas point records", None)
+          .required("points", list(record_shape()), "Canvas point records")
           .named(
             "x-bounds",
             list(SyntaxShape::Number),
-            "Horizontal bounds",
+            "Horizontal bounds (default: [-10 10])",
             None,
           )
           .named(
             "y-bounds",
             list(SyntaxShape::Number),
-            "Vertical bounds",
+            "Vertical bounds (default: [-10 10])",
             None,
           )
-          .named("marker", SyntaxShape::String, "Point marker", None)
+          .named(
+            "marker",
+            SyntaxShape::String,
+            "Point marker (default: braille)",
+            None,
+          )
           .named(
             "background-color",
             color_shape(),
-            "Canvas background color",
+            "Canvas background color (default: terminal default)",
             None,
           ),
+        false,
       ),
       Self::Chart => with_presentation(
         signature
-          .required_named("datasets", list(record_shape()), "Chart datasets", None)
-          .named("x-axis", record_shape(), "Horizontal axis", None)
-          .named("y-axis", record_shape(), "Vertical axis", None),
+          .required("datasets", list(record_shape()), "Chart datasets")
+          .named(
+            "x-axis",
+            record_shape(),
+            "Horizontal axis (default: bounds [0 100], no labels)",
+            None,
+          )
+          .named(
+            "y-axis",
+            record_shape(),
+            "Vertical axis (default: bounds [0 100], no labels)",
+            None,
+          ),
+        false,
       ),
       Self::Clear => signature,
       Self::Fill => signature
-        .named("symbol", SyntaxShape::String, "Repeated cell symbol", None)
-        .named("style", record_shape(), "Fill style", None),
-      Self::Layout => signature
-        .required_named(
-          "children",
-          list(record_shape()),
-          "Child widget records",
+        .named(
+          "symbol",
+          SyntaxShape::String,
+          "Repeated cell symbol (default: space)",
           None,
         )
         .named(
+          "style",
+          record_shape(),
+          "Fill style (default: terminal default)",
+          None,
+        ),
+      Self::Layout => signature
+        .required("children", list(record_shape()), "Child widget records")
+        .named(
           "direction",
           SyntaxShape::String,
-          "vertical or horizontal",
+          "vertical or horizontal (default: vertical)",
           None,
         )
         .named(
           "constraints",
           list(record_shape()),
-          "One layout constraint per child",
+          "One layout constraint per child (default: one {fill: 1} per child)",
           None,
         ),
       Self::Paragraph => with_presentation(
         signature
-          .required_named("text", SyntaxShape::String, "Text to display", None)
-          .named("alignment", SyntaxShape::String, "Text alignment", None)
-          .named("wrap", SyntaxShape::Boolean, "Whether text wraps", None),
+          .required("text", SyntaxShape::String, "Text to display")
+          .named(
+            "alignment",
+            SyntaxShape::String,
+            "Text alignment (default: left)",
+            None,
+          )
+          .switch(
+            "wrap",
+            "Whether text wraps (default: true)",
+            None,
+          ),
+        false,
       ),
       Self::Button => with_presentation(
         signature
-          .required_named("id", SyntaxShape::String, "Event widget identifier", None)
-          .required_named("label", SyntaxShape::String, "Button label", None)
-          .named("alignment", SyntaxShape::String, "Label alignment", None)
+          .required("id", SyntaxShape::String, "Event widget identifier")
+          .required("label", SyntaxShape::String, "Button label")
+          .named(
+            "alignment",
+            SyntaxShape::String,
+            "Label alignment (default: left)",
+            None,
+          )
           .named(
             "on-click",
-            SyntaxShape::Closure(None),
-            "Left-button release handler",
+            handler_shape(),
+            "Closure taking a mouse event record and returning null, state, or an action record (default: no handler)",
             None,
           ),
+        true,
       ),
-      Self::List => with_presentation(signature.required_named(
-        "items",
-        list(SyntaxShape::String),
-        "List item strings",
-        None,
-      )),
+      Self::List => with_presentation(
+        signature.required(
+          "items",
+          list(SyntaxShape::String),
+          "List item strings",
+        ),
+        false,
+      ),
       Self::Gauge => with_presentation(
         signature
-          .required_named("ratio", SyntaxShape::Number, "Completion from 0 to 1", None)
-          .named("label", SyntaxShape::String, "Gauge label", None)
-          .named("gauge-style", record_shape(), "Filled area style", None),
+          .required("ratio", SyntaxShape::Number, "Completion from 0 to 1")
+          .named(
+            "label",
+            SyntaxShape::String,
+            "Gauge label (default: Ratatui-generated percentage)",
+            None,
+          )
+          .named(
+            "gauge-style",
+            record_shape(),
+            "Filled area style (default: terminal default)",
+            None,
+          ),
+        false,
       ),
       Self::LineGauge => with_presentation(
         signature
-          .required_named("ratio", SyntaxShape::Number, "Completion from 0 to 1", None)
-          .named("label", SyntaxShape::String, "Gauge label", None)
-          .named("filled-style", record_shape(), "Filled line style", None)
+          .required("ratio", SyntaxShape::Number, "Completion from 0 to 1")
+          .named(
+            "label",
+            SyntaxShape::String,
+            "Gauge label (default: Ratatui-generated percentage)",
+            None,
+          )
+          .named(
+            "filled-style",
+            record_shape(),
+            "Filled line style (default: terminal default)",
+            None,
+          )
           .named(
             "unfilled-style",
             record_shape(),
-            "Unfilled line style",
+            "Unfilled line style (default: terminal default)",
             None,
           )
-          .named("filled-symbol", SyntaxShape::String, "Filled symbol", None)
+          .named(
+            "filled-symbol",
+            SyntaxShape::String,
+            "Filled symbol (default: ─)",
+            None,
+          )
           .named(
             "unfilled-symbol",
             SyntaxShape::String,
-            "Unfilled symbol",
+            "Unfilled symbol (default: ─)",
             None,
           ),
+        false,
       ),
-      Self::Logo => signature.named("size", SyntaxShape::String, "tiny or small", None),
-      Self::Mascot => signature.named(
+      Self::Logo => signature.named(
+        "size",
+        SyntaxShape::String,
+        "tiny or small (default: tiny)",
+        None,
+      ),
+      Self::Mascot => signature.switch(
         "blink",
-        SyntaxShape::Boolean,
-        "Render the alternate eye",
+        "Render the alternate eye (default: false)",
         None,
       ),
       Self::Scrollbar => signature
-        .required_named(
-          "content-length",
+        .required("content-length", SyntaxShape::Int, "Total content length")
+        .named(
+          "position",
           SyntaxShape::Int,
-          "Total content length",
+          "Current offset (default: 0)",
           None,
         )
-        .named("position", SyntaxShape::Int, "Current offset", None)
         .named(
           "viewport-length",
           SyntaxShape::Int,
-          "Visible content length",
+          "Visible content length (default: 0, meaning track length)",
           None,
         )
         .named(
           "orientation",
           SyntaxShape::String,
-          "Scrollbar orientation",
+          "Scrollbar orientation (default: vertical-right)",
           None,
         )
-        .named("thumb-style", record_shape(), "Scroll thumb style", None)
-        .named("track-style", record_shape(), "Scroll track style", None),
+        .named(
+          "thumb-style",
+          record_shape(),
+          "Scroll thumb style (default: terminal default)",
+          None,
+        )
+        .named(
+          "track-style",
+          record_shape(),
+          "Scroll track style (default: terminal default)",
+          None,
+        ),
       Self::Sparkline => with_presentation(
         signature
-          .required_named(
-            "data",
-            list(SyntaxShape::Any),
-            "Integer or null samples",
+          .required("data", list(SyntaxShape::Any), "Integer or null samples")
+          .named(
+            "max",
+            SyntaxShape::Int,
+            "Maximum sample value (default: largest sample)",
             None,
           )
-          .named("max", SyntaxShape::Int, "Maximum sample value", None)
           .named(
             "direction",
             SyntaxShape::String,
-            "Rendering direction",
+            "Rendering direction (default: left-to-right)",
             None,
           )
           .named(
             "absent-symbol",
             SyntaxShape::String,
-            "Missing sample symbol",
+            "Missing sample symbol (default: space)",
             None,
           )
-          .named("absent-style", record_shape(), "Missing sample style", None),
+          .named(
+            "absent-style",
+            record_shape(),
+            "Missing sample style (default: terminal default)",
+            None,
+          ),
+        false,
       ),
       Self::Table => with_presentation(
         signature
-          .required_named("rows", list(list(SyntaxShape::String)), "Table rows", None)
-          .named("header", list(SyntaxShape::String), "Header cells", None)
-          .named("widths", list(record_shape()), "Column constraints", None)
-          .named("column-spacing", SyntaxShape::Int, "Column spacing", None),
+          .required("rows", list(list(SyntaxShape::String)), "Table rows")
+          .named(
+            "header",
+            list(SyntaxShape::String),
+            "Header cells (default: no header)",
+            None,
+          )
+          .named(
+            "widths",
+            list(record_shape()),
+            "Column constraints (default: one {fill: 1} per column)",
+            None,
+          )
+          .named(
+            "column-spacing",
+            SyntaxShape::Int,
+            "Column spacing (default: 1)",
+            None,
+          ),
+        false,
       ),
       Self::Tabs => with_presentation(
         signature
-          .required_named("titles", list(SyntaxShape::String), "Tab titles", None)
-          .named("selected", SyntaxShape::Int, "Selected tab index", None)
-          .named("divider", SyntaxShape::String, "Title divider", None)
+          .required("titles", list(SyntaxShape::String), "Tab titles")
+          .named(
+            "selected",
+            SyntaxShape::Int,
+            "Selected tab index (default: none)",
+            None,
+          )
+          .named(
+            "divider",
+            SyntaxShape::String,
+            "Title divider (default: │)",
+            None,
+          )
           .named(
             "highlight-style",
             record_shape(),
-            "Selected title style",
+            "Selected title style (default: terminal default)",
             None,
           ),
+        false,
       ),
       Self::Spacer => signature,
     }
@@ -379,13 +544,12 @@ impl SimplePluginCommand for TuiWidget {
     self.widget.description()
   }
 
-  /// Explains how constructor output feeds layouts and applications.
+  /// Explains how constructor output feeds layouts and documents handler contracts.
   fn extra_description(&self) -> &str {
-    "Returns a validated widget record. Compose records in `tui layout --children [...]` \
-and pass the result as the positional view of `tui`."
+    self.widget.extra_description()
   }
 
-  /// Converts supplied flags into a validated declarative widget record.
+  /// Converts supplied arguments into a validated declarative widget record.
   fn run(
     &self,
     _plugin: &TuiPlugin,
@@ -397,24 +561,77 @@ and pass the result as the positional view of `tui`."
   }
 }
 
+impl WidgetKind {
+  /// Returns constructor help, including the complete button handler contract.
+  fn extra_description(self) -> &'static str {
+    match self {
+      Self::Button => {
+        r#"Returns a validated widget record. Compose records in `tui layout [...]` and pass the
+result as the positional view of `tui`.
+
+The `--on-click` closure receives one `event` parameter and the same record as pipeline input:
+
+{
+  type: string
+  kind: string
+  button: string
+  column: int
+  row: int
+  modifiers: list<string>
+  widget: string
+  state: any
+}
+
+It may return `null` (no change), any value (new state), or this action record, in which every field
+is optional:
+
+{
+  state?: any
+  view?: record | closure(any)
+  quit?: bool
+}"#
+      },
+      _ => {
+        "Returns a validated widget record. Compose records in `tui layout [...]` \
+and pass the result as the positional view of `tui`."
+      },
+    }
+  }
+}
+
 /// Adds fields shared by widgets rendered inside a Ratatui block.
-fn with_presentation(signature: Signature) -> Signature {
+fn with_presentation(signature: Signature, default_border: bool) -> Signature {
+  let border_description = if default_border {
+    "Whether to draw borders (default: true)"
+  } else {
+    "Whether to draw borders (default: false)"
+  };
   signature
-    .named("title", SyntaxShape::String, "Block title", None)
     .named(
-      "border",
-      SyntaxShape::Boolean,
-      "Whether to draw borders",
+      "title",
+      SyntaxShape::String,
+      "Block title (default: no title)",
       None,
     )
+    .switch("border", border_description, None)
     .named(
       "border-type",
       SyntaxShape::String,
-      "Block border type",
+      "Block border type (default: plain)",
       None,
     )
-    .named("style", record_shape(), "Widget style", None)
-    .named("border-style", record_shape(), "Border style", None)
+    .named(
+      "style",
+      record_shape(),
+      "Widget style (default: terminal default)",
+      None,
+    )
+    .named(
+      "border-style",
+      record_shape(),
+      "Border style (default: terminal default)",
+      None,
+    )
 }
 
 /// Builds a list shape containing values of one shape.
@@ -427,19 +644,32 @@ fn record_shape() -> SyntaxShape {
   SyntaxShape::Record(Default::default())
 }
 
+/// Builds the shape for a handler closure accepting one event record parameter.
+fn handler_shape() -> SyntaxShape {
+  SyntaxShape::Closure(Some(vec![record_shape()]))
+}
+
 /// Builds the string-or-index shape accepted by Ratatui colors.
 fn color_shape() -> SyntaxShape {
   SyntaxShape::OneOf(vec![SyntaxShape::Int, SyntaxShape::String])
 }
 
-/// Copies supplied named flags into a record and validates it with the runtime parser.
+/// Copies supplied arguments into a record and validates it with the runtime parser.
 fn build_widget_record(widget: WidgetKind, call: &EvaluatedCall) -> Result<Value, LabeledError> {
   let mut record = Record::new();
   record.push("type", Value::string(widget.record_type(), call.head));
+  for (index, field) in widget.required_fields().iter().enumerate() {
+    let value = call.positional.get(index).cloned().ok_or_else(|| {
+      LabeledError::new("Missing required widget argument")
+        .with_label(format!("missing positional `{field}`"), call.head)
+    })?;
+    record.push(*field, value);
+  }
   for (name, value) in &call.named {
-    if let Some(value) = value {
-      record.push(name.item.clone(), value.clone());
-    }
+    let value = value
+      .clone()
+      .unwrap_or_else(|| Value::bool(true, name.span));
+    record.push(name.item.clone(), value);
   }
   let value = Value::record(record, call.head);
   UiNode::parse(&value)?;
@@ -453,24 +683,29 @@ mod tests {
 
   use super::{WidgetKind, build_widget_record};
 
-  /// Builds a call carrying named values at test spans.
-  fn call(named: Vec<(&str, Value)>) -> EvaluatedCall {
+  /// Builds a call carrying positional and named values at test spans.
+  fn call(positional: Vec<Value>, named: Vec<(&str, Value)>) -> EvaluatedCall {
     let span = Span::test_data();
     let mut call = EvaluatedCall::new(span);
+    for value in positional {
+      call.add_positional(value);
+    }
     for (name, value) in named {
       call.add_named(name.to_owned().into_spanned(span), value);
     }
     call
   }
 
-  /// Verifies that flags become fields on a parser-compatible widget record.
+  /// Verifies that arguments become fields on a parser-compatible widget record.
   #[test]
-  fn builds_valid_widget_record_from_flags() {
-    let call = call(vec![
-      ("text", Value::test_string("hello")),
-      ("alignment", Value::test_string("center")),
-      ("border", Value::test_bool(true)),
-    ]);
+  fn builds_valid_widget_record_from_arguments() {
+    let call = call(
+      vec![Value::test_string("hello")],
+      vec![
+        ("alignment", Value::test_string("center")),
+        ("border", Value::test_bool(true)),
+      ],
+    );
 
     let value = build_widget_record(WidgetKind::Paragraph, &call).expect("valid paragraph");
     let record = value.as_record().expect("record output");
@@ -480,17 +715,37 @@ mod tests {
     assert!(record.get("border").unwrap().as_bool().unwrap());
   }
 
+  /// Verifies bare widget switches are emitted as true record fields.
+  #[test]
+  fn builds_true_field_from_bare_switch() {
+    let span = Span::test_data();
+    let mut call = call(vec![Value::test_string("hello")], vec![]);
+    call.add_flag("border".into_spanned(span));
+
+    let value = build_widget_record(WidgetKind::Paragraph, &call).expect("valid paragraph");
+
+    assert!(
+      value
+        .as_record()
+        .unwrap()
+        .get("border")
+        .unwrap()
+        .as_bool()
+        .unwrap()
+    );
+  }
+
   /// Verifies that nested constructor records compose into a valid layout.
   #[test]
   fn composes_widget_records_in_layout() {
     let paragraph = build_widget_record(
       WidgetKind::Paragraph,
-      &call(vec![("text", Value::test_string("hello"))]),
+      &call(vec![Value::test_string("hello")], vec![]),
     )
     .expect("valid child");
     let layout = build_widget_record(
       WidgetKind::Layout,
-      &call(vec![("children", Value::test_list(vec![paragraph]))]),
+      &call(vec![Value::test_list(vec![paragraph])], vec![]),
     )
     .expect("valid layout");
 
@@ -518,6 +773,54 @@ mod tests {
 
     assert_eq!(names.len(), WidgetKind::ALL.len());
     assert!(names.contains(&"tui paragraph"));
+    assert!(!names.contains(&"tui block"));
     assert!(names.iter().all(|name| !name.starts_with("tui widget ")));
+  }
+
+  /// Verifies button help documents its closure parameter, pipeline input, and result types.
+  #[test]
+  fn documents_button_handler_contract() {
+    let help = WidgetKind::Button.extra_description();
+
+    assert!(help.contains("`event` parameter"));
+    assert!(help.contains("pipeline input"));
+    assert!(help.contains("return `null`"));
+    assert!(help.contains("modifiers: list<string>"));
+    assert!(help.contains("view?: record | closure(any)"));
+  }
+
+  /// Verifies record assembly uses the same positional field order as each signature.
+  #[test]
+  fn keeps_required_field_mapping_aligned_with_signatures() {
+    for widget in WidgetKind::ALL {
+      let signature = widget.signature(widget.command_name());
+      let fields = signature
+        .required_positional
+        .iter()
+        .map(|argument| argument.name.as_str())
+        .collect::<Vec<_>>();
+
+      assert_eq!(fields, widget.required_fields());
+    }
+  }
+
+  /// Verifies every optional constructor flag documents its runtime default.
+  #[test]
+  fn documents_defaults_for_all_widget_flags() {
+    for widget in WidgetKind::ALL {
+      let signature = widget.signature(widget.command_name());
+      for flag in signature
+        .named
+        .into_iter()
+        .filter(|flag| flag.long != "help")
+      {
+        assert!(
+          flag.desc.contains("(default:"),
+          "{} --{} does not document a default",
+          widget.command_name(),
+          flag.long,
+        );
+      }
+    }
   }
 }

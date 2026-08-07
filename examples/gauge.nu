@@ -3,7 +3,7 @@
 (tui
   --state {running: false progress: 0}
   --tick-rate-ms 50
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
@@ -22,21 +22,21 @@
     (tui layout
       --direction vertical
       --constraints [{length: 2} {fill: 1} {fill: 1} {fill: 1} {fill: 1} {length: 1}]
-      --children [
-        (tui paragraph --text "Ratatui Gauge Example" --alignment center --style {fg: "#cbd5e1" bold: true})
-        (tui gauge --ratio $ratio --label $"($app.progress)%" --title " Gauge with percentage " --gauge-style {fg: "#991b1b"} --border true)
-        (tui gauge --ratio $ratio --label $"($app.progress).0/100" --title " Gauge with ratio and custom label " --gauge-style {fg: "#166534" bold: true italic: true} --border true)
-        (tui line-gauge --ratio $ratio --label $"($app.progress)%" --title " Line gauge " --filled-style {fg: "#1e40af"} --border true)
+      [
+        (tui paragraph "Ratatui Gauge Example" --alignment center --style {fg: "#cbd5e1" bold: true})
+        (tui gauge $ratio --label $"($app.progress)%" --title " Gauge with percentage " --gauge-style {fg: "#991b1b"} --border)
+        (tui gauge $ratio --label $"($app.progress).0/100" --title " Gauge with ratio and custom label " --gauge-style {fg: "#166534" bold: true italic: true} --border)
+        (tui line-gauge $ratio --label $"($app.progress)%" --title " Line gauge " --filled-style {fg: "#1e40af"} --border)
         (tui line-gauge
-          --ratio $ratio
+          $ratio
           --label $"($app.progress)%"
           --title " Unicode line gauge "
           --filled-symbol "━"
           --unfilled-symbol "─"
           --filled-style {fg: "#9a3412" bold: true}
           --unfilled-style {fg: dark_gray}
-          --border true)
-        (tui paragraph --text "Enter/Space start • r reset • q quit" --alignment center --style {fg: "#cbd5e1"})
+          --border)
+        (tui paragraph "Enter/Space start • r reset • q quit" --alignment center --style {fg: "#cbd5e1"})
       ])
   }
 )

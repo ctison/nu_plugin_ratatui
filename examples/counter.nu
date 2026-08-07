@@ -6,11 +6,11 @@
     (tui layout
       --direction vertical
       --constraints [{length: 3} {fill: 1}]
-      --children [
+      [
         (tui button
-          --id increment
-          --label $" Clicked ($count) times "
-          --border true
+          increment
+          $" Clicked ($count) times "
+          --border
           --border-type rounded
           --alignment center
           --style {fg: cyan bold: true}
@@ -18,7 +18,7 @@
             {state: ($event.state + 1)}
           })
         (tui paragraph
-          --text "Click the button, then press Escape to return the final count."
+          "Click the button, then press Escape to return the final count."
           --alignment center
           --style {fg: dark_gray})
       ])

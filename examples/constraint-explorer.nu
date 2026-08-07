@@ -4,7 +4,7 @@ let kinds = [length percentage min max fill]
 
 (tui
   --state {selected: 0 amount: 20}
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
@@ -19,23 +19,23 @@ let kinds = [length percentage min max fill]
     let kind = $kinds | get $app.selected
     let constraint = {} | insert $kind $app.amount
     let tabs = (tui tabs
-      --titles $kinds
+      $kinds
       --selected $app.selected
       --highlight-style {fg: yellow bold: true reversed: true}
-      --border true
+      --border
       --title " Constraints — h/l select • j/k adjust • q quit ")
     (tui layout
       --direction vertical
       --constraints [{length: 3} {length: 3} {fill: 1}]
-      --children [
+      [
         $tabs
-        (tui paragraph --text $"($kind): ($app.amount)" --alignment center --style {fg: cyan bold: true})
+        (tui paragraph $"($kind): ($app.amount)" --alignment center --style {fg: cyan bold: true})
         (tui layout
           --direction horizontal
           --constraints [$constraint {fill: 1}]
-          --children [
-            (tui paragraph --text $"($kind)\n($app.amount)" --alignment center --border true --border-style {fg: cyan} --style {bg: "#1e3a8a"})
-            (tui paragraph --text "Fill(1)" --alignment center --border true --border-style {fg: dark_gray} --style {bg: "#0f172a"})
+          [
+            (tui paragraph $"($kind)\n($app.amount)" --alignment center --border --border-style {fg: cyan} --style {bg: "#1e3a8a"})
+            (tui paragraph "Fill(1)" --alignment center --border --border-style {fg: dark_gray} --style {bg: "#0f172a"})
           ])
       ])
   }

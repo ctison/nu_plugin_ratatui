@@ -12,18 +12,18 @@ let rows = [
   (tui layout
     --direction vertical
     --constraints [{length: 2} {fill: 1} {length: 1}]
-    --children [
-      (tui paragraph --text "Ratatui Table Example" --alignment center --style {fg: cyan bold: true})
+    [
+      (tui paragraph "Ratatui Table Example" --alignment center --style {fg: cyan bold: true})
       (tui table
         --header [Name Address Email]
-        --rows $rows
+        $rows
         --widths [{percentage: 25} {percentage: 40} {percentage: 35}]
         --column-spacing 2
         --title " People "
-        --border true
+        --border
         --border-type rounded
         --border-style {fg: cyan}
         --style {fg: white})
-      (tui paragraph --text "Press Esc to quit" --alignment center --style {fg: dark_gray})
+      (tui paragraph "Press Esc to quit" --alignment center --style {fg: dark_gray})
     ])
 )

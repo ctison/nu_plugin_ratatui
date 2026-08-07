@@ -15,19 +15,18 @@ nu --plugins target/debug/nu_plugin_ratatui examples/counter.nu
 
 This one-shot command does not modify your plugin registry.
 
-Widgets can also be declared with named flags. The `tui` namespace exposes one constructor subcommand per widget and returns ordinary records:
+Widgets can also be declared with constructor commands. The `tui` namespace exposes one subcommand per widget and returns ordinary records:
 
 ```nu
-let content = tui paragraph --text "Composable widgets" --alignment center
-let progress = tui gauge --ratio 0.65 --label "65%" --border true
+let content = tui paragraph "Composable widgets" --alignment center
+let progress = tui gauge 0.65 --label "65%" --border
 
-tui (tui layout
+tui (tui layout [$content $progress]
     --direction vertical
-    --constraints [{fill: 1} {length: 3}]
-    --children [$content $progress])
+    --constraints [{fill: 1} {length: 3}])
 ```
 
-Required widget fields are required flags; optional fields are emitted only when supplied. Constructor output is validated against the same schema used by `tui`.
+Required widget fields are positional parameters; optional fields remain named flags and are emitted only when supplied. Constructor output is validated against the same schema used by `tui`.
 
 ## Install
 
@@ -47,6 +46,28 @@ source examples/counter.nu
 Nushell must parse `plugin add` before it can recognize `tui`. Do not put registration and the example in the same script or `{ ... }` block. If `tui` is still not found after registration, start a new Nushell process so it reloads the plugin registry.
 
 The interactive command requires Nushell's local-socket plugin transport because stdin and stdout must remain available to the terminal.
+
+## Embedded examples
+
+Every `examples/*.nu` script is embedded in the plugin. Pass its filename without the `.nu` suffix to print the source:
+
+```nu
+tui example volatility-surface
+```
+
+Omit the name to choose from an interactive list with a `nu-highlight` syntax-colored source preview. Use Page Up and Page Down to scroll the preview:
+
+```nu
+tui example
+```
+
+To evaluate returned source explicitly, start a child Nushell with the command text:
+
+```nu
+nu --commands (tui example volatility-surface)
+```
+
+Nushell 0.114 resolves `source` paths at parse time and plugin commands are not const, so `source (tui example ...)` cannot be evaluated by Nushell itself.
 
 ## Counter example
 
@@ -104,7 +125,7 @@ Ctrl-C always exits. Escape exits unless `--quit-on-esc` is false.
 
 All widgets are records with a `type` field. Write them directly or construct them with `tui <type>` flags.
 
-- Ratatui widgets: `bar-chart`, `block`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`.
+- Ratatui widgets: `bar-chart`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`.
 - Plugin composition widgets: `layout`, `button`, and `spacer`.
 
 The records for data-driven widgets use ordinary Nu values: bar records for `bar-chart`, `[x y]` pairs for `chart`, point records for `canvas`, nested string lists for `table`, and integer or null samples for `sparkline`. See [`doc/widgets.md`](doc/widgets.md) for every field and a runnable record for each widget.
@@ -112,3 +133,5 @@ The records for data-driven widgets use ordinary Nu values: bar records for `bar
 Constraints are one-field records: `{length: 3}`, `{percentage: 50}`, `{min: 10}`, `{max: 20}`, or `{fill: 1}`. When omitted, every child gets `{fill: 1}`.
 
 Widget presentation fields include `title`, `border`, `border-type` (`plain`, `rounded`, `double`, or `thick`), `style`, and `border-style`. Styles accept `fg`, `bg`, `bold`, `italic`, `underlined`, `reversed`, and `dim`. Colors may be Ratatui color names, hex strings such as `#5fd7ff`, or indexed color integers from 0 to 255.
+
+Use `tui style --fg cyan --bold` to construct a validated style record for any style-bearing widget flag. Boolean switches accept explicit false values with equals syntax, such as `--underlined=false`; `--underline` is also accepted as an alias.

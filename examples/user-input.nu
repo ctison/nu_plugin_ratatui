@@ -2,7 +2,7 @@
 # Press e to edit, Escape to return to normal mode, Enter to save, and q to quit.
 (tui
   --state {mode: normal input: [] cursor: 0 messages: []}
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     if $event.state.mode == normal {
       match $event.code {
@@ -47,10 +47,10 @@
     (tui layout
       --direction vertical
       --constraints [{length: 1} {length: 3} {fill: 1}]
-      --children [
-        (tui paragraph --text $help --style {bold: ($app.mode == normal)})
-        (tui paragraph --text $"($before)($cursor)($after)" --title " Input " --border true --style {fg: (if $app.mode == editing {"yellow"} else {"white"})})
-        (tui list --items $messages --title " Messages " --border true)
+      [
+        (tui paragraph $help --style {bold: ($app.mode == normal)})
+        (tui paragraph $"($before)($cursor)($after)" --title " Input " --border --style {fg: (if $app.mode == editing {"yellow"} else {"white"})})
+        (tui list $messages --title " Messages " --border)
       ])
   }
 )

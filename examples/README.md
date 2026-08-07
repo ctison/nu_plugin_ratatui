@@ -9,6 +9,13 @@ nu --plugins target/debug/nu_plugin_ratatui examples/gauge.nu
 
 Every example is a standalone Nushell script and uses only Nushell built-ins plus the plugin. Press `Esc` or `q` to exit interactive examples; the instruction line in each application lists any additional controls.
 
+Installed plugins embed this entire gallery. Retrieve a named example's source, or omit the name to open a chooser with a syntax-highlighted code preview:
+
+```nu
+tui example gauge
+tui example
+```
+
 ## Ratatui app ports
 
 These 26 scripts adapt examples from [Ratatui's `examples/apps` directory](https://github.com/ratatui/ratatui/tree/main/examples/apps):

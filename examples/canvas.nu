@@ -11,7 +11,7 @@ let axes = (-100..100 | each { |x| {x: $x y: 0 color: dark_gray} }) | append (-5
 
 (tui
   --state {x: 0 y: 0 marker-index: 0}
-  --quit-on-esc false
+  --quit-on-esc=false
   --on-key { |event|
     match $event.code {
       "q" | "escape" => {state: $event.state quit: true}
@@ -29,15 +29,15 @@ let axes = (-100..100 | each { |x| {x: $x y: 0 color: dark_gray} }) | append (-5
     (tui layout
       --direction vertical
       --constraints [{length: 2} {fill: 1}]
-      --children [
-        (tui paragraph --text $"Canvas Example — marker: ($marker) • Enter marker • hjkl move • q quit" --alignment center --style {bold: true})
+      [
+        (tui paragraph $"Canvas Example — marker: ($marker) • Enter marker • hjkl move • q quit" --alignment center --style {bold: true})
         (tui canvas
-          --points $points
+          $points
           --x-bounds [-100 100]
           --y-bounds [-50 50]
           --marker $marker
           --title " Shapes and points "
-          --border true
+          --border
           --border-type rounded)
       ])
   }

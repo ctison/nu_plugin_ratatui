@@ -59,33 +59,37 @@ impl SimplePluginCommand for Tui {
         "view",
         SyntaxShape::OneOf(vec![
           SyntaxShape::Record(Vec::new().into()),
-          SyntaxShape::Closure(None),
+          view_closure_shape(),
         ]),
-        "Widget tree or closure that returns one",
+        "Widget record, or closure(any) taking state and returning a widget record",
       )
-      .named("state", SyntaxShape::Any, "Initial application state", None)
+      .named(
+        "state",
+        SyntaxShape::Any,
+        "Initial application state (default: null)",
+        None,
+      )
       .named(
         "on-event",
-        SyntaxShape::Closure(None),
-        "Handler for every terminal event",
+        handler_shape(),
+        "Closure taking an event record and returning null, state, or an action record (default: no handler)",
         None,
       )
       .named(
         "on-key",
-        SyntaxShape::Closure(None),
-        "Handler for key press events",
+        handler_shape(),
+        "Closure taking a key event record and returning null, state, or an action record (default: no handler)",
         None,
       )
-      .named(
+      .switch(
         "quit-on-esc",
-        SyntaxShape::Boolean,
-        "Whether Escape exits the application",
+        "Whether Escape exits the application (default: true)",
         None,
       )
       .named(
         "tick-rate-ms",
         SyntaxShape::Int,
-        "Event polling and redraw interval in milliseconds",
+        "Event polling and redraw interval in milliseconds (default: 250)",
         None,
       )
       .input_output_type(Type::Nothing, Type::Any)
@@ -99,10 +103,61 @@ impl SimplePluginCommand for Tui {
 
   /// Documents the reactive view and handler return contracts.
   fn extra_description(&self) -> &str {
-    "The positional `view` may be a widget record or a `{ |state| ... }` closure returning one. \
-Handlers receive one event record containing the current `state`. A handler may return a new state \
-directly, or an action record such as `{ state: $next, quit: false }`. Supported action fields are \
-`state`, `view`, and `quit`. Escape exits by default; Ctrl-C always exits."
+    r#"Closure contracts:
+
+The positional `view` closure receives one `state` parameter of type `any` and the same state as
+pipeline input. It must return a widget record.
+
+The `--on-key` closure receives one `event` parameter and the same record as pipeline input:
+
+{
+  type: 'key'
+  code: string
+  kind: 'press' | 'repeat' | 'release'
+  modifiers: list<'shift' | 'control' | 'alt' | 'super' | 'hyper' | 'meta'>
+  state: any
+}
+
+The `--on-event` closure receives one `event` parameter and the same record as pipeline input. Key
+events have the shape above. Mouse events have this shape:
+
+{
+  type: 'mouse'
+  kind: 'down' | 'up' | 'drag' | 'moved' | 'scroll-down' | 'scroll-up' | 'scroll-left' | 'scroll-right'
+  button?: 'left' | 'right' | 'middle'
+  column: int
+  row: int
+  modifiers: list<'shift' | 'control' | 'alt' | 'super' | 'hyper' | 'meta'>
+  widget?: string
+  state: any
+}
+
+Resize events have this shape:
+
+{
+  type: 'resize'
+  columns: int
+  rows: int
+  state: any
+}
+
+Focus, tick, and unknown events have this shape:
+
+{
+  type: 'focus-gained' | 'focus-lost' | 'tick' | 'unknown'
+  state: any
+}
+
+Each event handler may return `null` (no change), any value (new state), or this action record, in
+which every field is optional:
+
+{
+  state?: any
+  view?: record | closure(any)
+  quit?: bool
+}
+
+The command returns the final state (`any`). Escape exits by default; Ctrl-C always exits."#
   }
 
   /// Provides a compact clickable counter example in `help tui`.
@@ -143,6 +198,16 @@ directly, or an action record such as `{ state: $next, quit: false }`. Supported
     let config = parse_config(call)?;
     run_application(engine, self.name(), &config, call.head)
   }
+}
+
+/// Builds the shape for a reactive view closure accepting one state parameter.
+fn view_closure_shape() -> SyntaxShape {
+  SyntaxShape::Closure(Some(vec![SyntaxShape::Any]))
+}
+
+/// Builds the shape for an event handler closure accepting one record parameter.
+fn handler_shape() -> SyntaxShape {
+  SyntaxShape::Closure(Some(vec![SyntaxShape::Record(Default::default())]))
 }
 
 /// Assembles and validates application configuration from command arguments.
@@ -568,11 +633,52 @@ fn labeled_io_error(context: &str, error: &io::Error, span: Span) -> LabeledErro
 
 #[cfg(test)]
 mod tests {
-  use nu_plugin::EvaluatedCall;
+  use nu_plugin::{EvaluatedCall, SimplePluginCommand};
   use nu_protocol::{IntoSpanned, Record, Span, Value};
   use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-  use super::{AppState, apply_handler_result, is_escape_event, key_event_value, parse_config};
+  use super::{
+    AppState, Tui, apply_handler_result, is_escape_event, key_event_value, parse_config,
+  };
+
+  /// Verifies root help documents closure parameters, pipeline input, and result types.
+  #[test]
+  fn documents_root_closure_contracts() {
+    let help = Tui.extra_description();
+
+    assert!(help.contains("`state` parameter"));
+    assert!(help.contains("`event` parameter"));
+    assert!(help.contains("pipeline input"));
+    assert!(help.contains("return `null`"));
+    assert!(help.contains("type: 'key'"));
+    assert!(help.contains("kind: 'press' | 'repeat' | 'release'"));
+    assert!(help.contains("type: 'mouse'"));
+    assert!(help.contains("button?: 'left' | 'right' | 'middle'"));
+    assert!(help.contains("type: 'resize'"));
+    assert!(help.contains("type: 'focus-gained' | 'focus-lost' | 'tick' | 'unknown'"));
+    assert!(
+      help.contains("modifiers: list<'shift' | 'control' | 'alt' | 'super' | 'hyper' | 'meta'>")
+    );
+    assert!(help.contains("view?: record | closure(any)"));
+    assert!(help.contains("final state (`any`)"));
+  }
+
+  /// Verifies every optional root flag documents its runtime default.
+  #[test]
+  fn documents_defaults_for_all_root_flags() {
+    for flag in Tui
+      .signature()
+      .named
+      .into_iter()
+      .filter(|flag| flag.long != "help")
+    {
+      assert!(
+        flag.desc.contains("(default:"),
+        "--{} does not document a default",
+        flag.long,
+      );
+    }
+  }
 
   /// Verifies that the positional view and named flags form application configuration.
   #[test]
