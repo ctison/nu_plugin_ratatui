@@ -190,6 +190,7 @@ jobs:
           pattern: nu_plugin_ratatui-*
           path: dist
           merge-multiple: true
+          skip-decompress: true
 
       - name: Generate SHA-256 checksums
         shell: bash
