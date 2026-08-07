@@ -1,0 +1,247 @@
+name: CI and release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Run Clippy
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
+      - name: Run tests
+        run: cargo test --locked --all-features
+
+  release-metadata:
+    name: Determine release metadata
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    outputs:
+      prerelease: ${{ steps.release.outputs.prerelease }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Check out repository and tags
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Select release version
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo "Release tags must use the stable SemVer form vX.Y.Z." >&2
+              exit 1
+            fi
+
+            tag="$GITHUB_REF_NAME"
+            prerelease=false
+          else
+            latest_tag="$({
+              git tag --list |
+                sed -nE '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/p' |
+                sort -V |
+                tail -n 1
+            } || true)"
+
+            if [[ -z "$latest_tag" ]]; then
+              next_version="0.1.0"
+            else
+              stable_version="${latest_tag#v}"
+              IFS=. read -r major minor patch <<< "$stable_version"
+              next_version="${major}.${minor}.$((patch + 1))"
+            fi
+
+            tag="v${next_version}-next.${GITHUB_RUN_NUMBER}"
+            prerelease=true
+          fi
+
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+  build-release:
+    name: Build ${{ matrix.target }}
+    if: github.event_name == 'push'
+    needs:
+      - quality
+      - release-metadata
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            archive: tar.gz
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            archive: tar.gz
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            archive: tar.gz
+          - os: macos-15
+            target: aarch64-apple-darwin
+            archive: tar.gz
+          - os: windows-2025
+            target: x86_64-pc-windows-msvc
+            archive: zip
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    env:
+      NU_PLUGIN_RATATUI_VERSION: ${{ needs.release-metadata.outputs.version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install MUSL tools
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes musl-tools
+
+      - name: Install Rust target
+        shell: bash
+        run: rustup target add "${{ matrix.target }}"
+
+      - name: Run release tests
+        shell: bash
+        run: cargo test --locked --release --all-features --target "${{ matrix.target }}"
+
+      - name: Build release binary
+        shell: bash
+        run: cargo build --locked --release --all-features --target "${{ matrix.target }}"
+
+      - name: Package Unix release
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive_base="nu_plugin_ratatui-${{ needs.release-metadata.outputs.tag }}-${{ matrix.target }}"
+          staging="dist/$archive_base"
+          mkdir -p "$staging"
+          cp "target/${{ matrix.target }}/release/nu_plugin_ratatui" README.md LICENSE "$staging/"
+          tar -C dist -czf "dist/${archive_base}.tar.gz" "$archive_base"
+
+      - name: Package Windows release
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archiveBase = 'nu_plugin_ratatui-${{ needs.release-metadata.outputs.tag }}-${{ matrix.target }}'
+          $staging = Join-Path 'dist' $archiveBase
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
+          Copy-Item 'target/${{ matrix.target }}/release/nu_plugin_ratatui.exe', 'README.md', 'LICENSE' -Destination $staging
+          Compress-Archive -Path $staging -DestinationPath "dist/$archiveBase.zip"
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*.${{ matrix.archive }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-release:
+    name: Publish ${{ needs.release-metadata.outputs.tag }}
+    if: github.event_name == 'push'
+    needs:
+      - quality
+      - release-metadata
+      - build-release
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: github-releases
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository and tags
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Download release archives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate SHA-256 checksums
+        shell: bash
+        run: |
+          cd dist
+          sha256sum ./*.tar.gz ./*.zip > SHA256SUMS
+
+      - name: Create prerelease tag
+        if: needs.release-metadata.outputs.prerelease == 'true'
+        env:
+          RELEASE_TAG: ${{ needs.release-metadata.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_sha="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | cut -f1)"
+
+          if [[ -n "$remote_sha" && "$remote_sha" != "$GITHUB_SHA" ]]; then
+            echo "Tag $RELEASE_TAG already points to a different commit." >&2
+            exit 1
+          fi
+
+          if [[ -z "$remote_sha" ]]; then
+            git tag "$RELEASE_TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IS_PRERELEASE: ${{ needs.release-metadata.outputs.prerelease }}
+          RELEASE_TAG: ${{ needs.release-metadata.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/* --clobber
+            exit 0
+          fi
+
+          arguments=(
+            "$RELEASE_TAG"
+            dist/*
+            --generate-notes
+            --title "$RELEASE_TAG"
+            --verify-tag
+          )
+
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            arguments+=(--prerelease)
+          else
+            arguments+=(--latest)
+          fi
+
+          gh release create "${arguments[@]}"

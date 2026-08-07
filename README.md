@@ -28,7 +28,26 @@ tui (tui layout [$content $progress]
 
 Required widget fields are positional parameters; optional fields remain named flags and are emitted only when supplied. Constructor output is validated against the same schema used by `tui`.
 
-## Install
+## Install a release
+
+Download the archive for your platform from the GitHub Release, then verify it against `SHA256SUMS` and extract it. Release archives are named with their Rust target:
+
+- Linux AMD64: `x86_64-unknown-linux-musl`
+- Linux ARM64: `aarch64-unknown-linux-musl`
+- macOS AMD64: `x86_64-apple-darwin`
+- macOS ARM64: `aarch64-apple-darwin`
+- Windows AMD64: `x86_64-pc-windows-msvc`
+- Windows ARM64: `aarch64-pc-windows-msvc`
+
+Register the extracted executable at a Nushell prompt:
+
+```nu
+plugin add /path/to/nu_plugin_ratatui
+```
+
+On Windows, the executable is named `nu_plugin_ratatui.exe`. Wait for `plugin add` to finish, then start a new Nushell prompt so it reloads the plugin registry.
+
+## Build from source
 
 Run these commands at a Nushell prompt:
 

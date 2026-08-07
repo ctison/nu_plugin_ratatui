@@ -10,10 +10,15 @@ use crate::{
 /// Nushell plugin exposing Ratatui commands.
 pub struct TuiPlugin;
 
+/// Returns the version embedded in the plugin binary.
+fn plugin_version() -> &'static str {
+  option_env!("NU_PLUGIN_RATATUI_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))
+}
+
 impl Plugin for TuiPlugin {
   /// Returns the plugin package version.
   fn version(&self) -> String {
-    env!("CARGO_PKG_VERSION").into()
+    plugin_version().into()
   }
 
   /// Returns the commands exported by this plugin.
@@ -48,5 +53,11 @@ mod tests {
     assert!(names.iter().any(|name| name == "tui example"));
     assert!(names.iter().any(|name| name == "tui style"));
     assert!(!names.iter().any(|name| name == "tui run"));
+  }
+
+  /// Verifies that the plugin reports the version selected at compile time.
+  #[test]
+  fn reports_embedded_version() {
+    assert_eq!(TuiPlugin.version(), super::plugin_version());
   }
 }
