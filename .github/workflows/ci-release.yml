@@ -187,7 +187,7 @@ jobs:
       - name: Download release archives
         uses: actions/download-artifact@v8
         with:
-          pattern: release-*
+          pattern: nu_plugin_ratatui-*
           path: dist
           merge-multiple: true
 
