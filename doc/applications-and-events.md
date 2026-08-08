@@ -11,7 +11,7 @@
 | `--on-event` | closure | no | — | Handles every terminal event, including ticks. |
 | `--on-key` | closure | no | — | Handles key press events. |
 | `--quit-on-esc` | bool | no | `true` | Whether an Escape key press closes the application. |
-| `--tick-rate-ms` | int | no | `250` | Event polling and redraw interval in milliseconds; must be at least 1. |
+| `--tick-rate-ms` | int | no | `250` | Handler `tick` interval in milliseconds; must be at least 1. |
 
 A closure-valued `view` receives the current state as its argument and pipeline input. It is evaluated before each frame is drawn.
 
@@ -58,7 +58,7 @@ A button's `on-click` handler runs on a left-button release over that button.
 
 | `type` | Additional fields | Description |
 | --- | --- | --- |
-| `tick` | — | Emitted when no terminal event arrives within `tick-rate-ms`. |
+| `tick` | — | Emitted on the configured `tick-rate-ms` schedule. Effect animation redraws do not emit ticks. |
 | `resize` | `columns`, `rows` | The terminal size changed. |
 | `focus-gained` | — | The terminal gained focus. |
 | `focus-lost` | — | The terminal lost focus. |

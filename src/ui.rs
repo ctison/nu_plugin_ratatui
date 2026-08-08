@@ -10,7 +10,10 @@ use ratatui::{
   },
 };
 
-use crate::config::{AxisSpec, BlockSpec, Handler, UiNode};
+use crate::{
+  config::{AxisSpec, BlockSpec, Handler, UiNode},
+  effect::EffectRegistry,
+};
 
 /// A rendered button region used for mouse hit-testing.
 #[derive(Clone)]
@@ -21,9 +24,19 @@ pub struct HitTarget {
 }
 
 impl UiNode {
-  /// Renders a widget tree and records all interactive regions.
-  pub fn render(&self, frame: &mut Frame<'_>, area: Rect, hits: &mut Vec<HitTarget>) {
+  /// Renders a widget tree using persistent state for declarative effect wrappers.
+  pub(crate) fn render_with_effects(
+    &self,
+    frame: &mut Frame<'_>,
+    area: Rect,
+    hits: &mut Vec<HitTarget>,
+    effects: &mut EffectRegistry,
+  ) {
     match self {
+      Self::Effect { id, effect, child } => {
+        child.render_with_effects(frame, area, hits, effects);
+        effects.apply(id, effect, frame, area);
+      },
       Self::Layout {
         direction,
         constraints,
@@ -34,7 +47,7 @@ impl UiNode {
           .constraints(constraints.clone())
           .split(area);
         for (child, child_area) in children.iter().zip(areas.iter().copied()) {
-          child.render(frame, child_area, hits);
+          child.render_with_effects(frame, child_area, hits, effects);
         }
       },
       Self::Paragraph {
@@ -385,6 +398,8 @@ fn make_axis(spec: &AxisSpec) -> Axis<'_> {
 
 #[cfg(test)]
 mod tests {
+  use std::time::Duration;
+
   use nu_protocol::{Record, Value};
   use ratatui::{
     Terminal,
@@ -392,7 +407,7 @@ mod tests {
     style::{Color, Modifier},
   };
 
-  use crate::config::UiNode;
+  use crate::{config::UiNode, effect::EffectRegistry};
 
   /// Builds a test record value from concise key/value pairs.
   fn record(fields: Vec<(&str, Value)>) -> Value {
@@ -401,6 +416,14 @@ mod tests {
       record.push(name, value);
     }
     Value::test_record(record)
+  }
+
+  /// Renders a node once with a fresh effect registry.
+  fn render(node: &UiNode, frame: &mut ratatui::Frame<'_>, hits: &mut Vec<super::HitTarget>) {
+    let mut effects = EffectRegistry::default();
+    effects.begin_frame(Duration::ZERO);
+    node.render_with_effects(frame, frame.area(), hits, &mut effects);
+    effects.end_frame();
   }
 
   /// Verifies that buttons render text and expose their complete hit region.
@@ -417,7 +440,7 @@ mod tests {
     let mut hits = Vec::new();
 
     terminal
-      .draw(|frame| node.render(frame, frame.area(), &mut hits))
+      .draw(|frame| render(&node, frame, &mut hits))
       .expect("draw succeeds");
 
     assert_eq!(hits.len(), 1);
@@ -440,7 +463,7 @@ mod tests {
     let mut terminal = Terminal::new(backend).expect("test terminal");
 
     terminal
-      .draw(|frame| node.render(frame, frame.area(), &mut Vec::new()))
+      .draw(|frame| render(&node, frame, &mut Vec::new()))
       .expect("draw succeeds");
 
     let cell = terminal
@@ -469,7 +492,7 @@ mod tests {
     let mut terminal = Terminal::new(backend).expect("test terminal");
 
     terminal
-      .draw(|frame| node.render(frame, frame.area(), &mut Vec::new()))
+      .draw(|frame| render(&node, frame, &mut Vec::new()))
       .expect("draw succeeds");
 
     let buffer = terminal.backend().buffer();

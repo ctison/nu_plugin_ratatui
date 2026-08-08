@@ -1,6 +1,7 @@
 use nu_plugin::{MsgPackSerializer, serve_plugin};
 
 mod config;
+mod effect;
 mod example;
 mod plugin;
 mod run;

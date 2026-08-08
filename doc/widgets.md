@@ -14,7 +14,7 @@ tui $view
 
 Boolean fields are switches. Use a bare flag such as `--border` for `true`, or an equals value such as `--wrap=false` for `false`. Optional flags omitted from a constructor are also omitted from its record, allowing the runtime defaults documented below to apply.
 
-Ratatui's 16 content widgets are exposed as `bar-chart`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`. The plugin also provides `layout`, `button`, and `spacer` for composition and interaction. The exact Ratatui struct-name aliases `monthly`, `ratatui-logo`, and `ratatui-mascot` are also accepted as record types.
+Ratatui's 16 content widgets are exposed as `bar-chart`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`. The plugin also provides `layout`, `button`, `spacer`, and `effect` for composition and interaction. The exact Ratatui struct-name aliases `monthly`, `ratatui-logo`, and `ratatui-mascot` are also accepted as record types.
 
 ## Layout
 
@@ -129,6 +129,74 @@ Gauges also support the [presentation fields](#presentation-fields).
 ```
 
 A spacer reserves the area assigned by its parent layout without drawing anything.
+
+## Effect wrapper
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `type` | string | yes | — | Must be `effect`. |
+| `id` | string | yes | — | Unique state key within the current widget tree. |
+| `effect` | effect record | yes | — | Parsed TachyonFX effect specification. |
+| `child` | widget record | yes | — | Widget subtree rendered before the effect is applied. |
+
+Use `tui effect <id> <effect> <child>` to construct this record. The wrapper always uses the child's current allocated rectangle, including after layout changes and terminal resizes. Nested wrappers apply from the innermost child outward.
+
+Effect state starts when an ID first appears and survives equivalent reactive view redraws. Changing the effect specification under an existing ID restarts it; changing the ID creates a fresh effect. Entries disappear when their wrappers disappear, and completed effects remain at their final state without restarting. Duplicate IDs in one tree are rejected before drawing.
+
+### Timed leaf effects
+
+Every timed leaf requires a positive `duration-ms` integer no larger than `4294967295`, accepts `interpolation` (default `linear`), and accepts an optional `filter` record.
+
+| Type and constructor | Required fields / positional parameters | Additional options |
+| --- | --- | --- |
+| `fade-from`, `tui effect fade-from` | `fg`, `bg`, `duration-ms` | `--interpolation`, `--filter` |
+| `fade-to`, `tui effect fade-to` | `fg`, `bg`, `duration-ms` | `--interpolation`, `--filter` |
+| `fade-from-fg`, `tui effect fade-from-fg` | `color`, `duration-ms` | `--interpolation`, `--filter` |
+| `fade-to-fg`, `tui effect fade-to-fg` | `color`, `duration-ms` | `--interpolation`, `--filter` |
+| `dissolve`, `tui effect dissolve` | `duration-ms` | `--interpolation`, `--filter`, `--seed` |
+| `coalesce`, `tui effect coalesce` | `duration-ms` | `--interpolation`, `--filter`, `--seed` |
+
+Fade colors use the same named, indexed, or `#RRGGBB` syntax as widget styles. `seed` is an optional integer from `0` through `4294967295` that makes randomized output reproducible.
+
+Directional effects have the common schema `{type: string direction: string gradient-length: int randomness: int color: color duration-ms: int interpolation?: string filter?: record seed?: int}`. Their constructors are:
+
+- `tui effect sweep-in <direction> <gradient-length> <randomness> <color> <duration-ms>`
+- `tui effect sweep-out <direction> <gradient-length> <randomness> <color> <duration-ms>`
+- `tui effect slide-in <direction> <gradient-length> <randomness> <color> <duration-ms>`
+- `tui effect slide-out <direction> <gradient-length> <randomness> <color> <duration-ms>`
+
+Directions are `left-to-right`, `right-to-left`, `up-to-down`, and `down-to-up`. Gradient length and randomness range from `0` through `65535`. All four constructors accept `--interpolation`, `--filter`, and `--seed`.
+
+Supported kebab-case interpolation names are `linear`, `reverse`, `smooth-step`, `spring`; `back-in`, `back-out`, `back-in-out`; `bounce-in`, `bounce-out`, `bounce-in-out`; `circ-in`, `circ-out`, `circ-in-out`; `cubic-in`, `cubic-out`, `cubic-in-out`; `elastic-in`, `elastic-out`, `elastic-in-out`; `expo-in`, `expo-out`, `expo-in-out`; `quad-in`, `quad-out`, `quad-in-out`; `quart-in`, `quart-out`, `quart-in-out`; `quint-in`, `quint-out`, `quint-in-out`; and `sine-in`, `sine-out`, `sine-in-out`.
+
+### Effect composition
+
+| Record schema | Constructor | Meaning |
+| --- | --- | --- |
+| `{type: sequence effects: list<record>}` | `tui effect sequence <effects>` | Run a non-empty list in order. |
+| `{type: parallel effects: list<record>}` | `tui effect parallel <effects>` | Run a non-empty list together. |
+| `{type: repeat effect: record times?: int duration-ms?: int}` | `tui effect repeat <effect> [--times int] [--duration-ms int]` | Repeat by positive count, positive duration, or forever when neither option is present. The two options are mutually exclusive. |
+| `{type: ping-pong effect: record}` | `tui effect ping-pong <effect>` | Run forward and then backward. |
+
+Effects nest recursively and invalid nested record types are rejected.
+
+### Effect filters
+
+Filters are ordinary records accepted by `filter` / `--filter` on leaf effects:
+
+| Record schema | Constructor | Selected cells |
+| --- | --- | --- |
+| `{type: text}` | `tui effect filter text` | Non-whitespace text. |
+| `{type: non-empty}` | `tui effect filter non-empty` | Cells with content or styling. |
+| `{type: fg-color color: color}` | `tui effect filter fg-color <color>` | Matching foreground color. |
+| `{type: bg-color color: color}` | `tui effect filter bg-color <color>` | Matching background color. |
+| `{type: not filter: record}` | `tui effect filter not <filter>` | Logical negation. |
+| `{type: all-of filters: list<record>}` | `tui effect filter all-of <filters>` | Cells matching every filter in a non-empty list. |
+| `{type: any-of filters: list<record>}` | `tui effect filter any-of <filters>` | Cells matching at least one filter in a non-empty list. |
+
+Effects advance from actual elapsed frame time and redraw at roughly 60 FPS while running. Animation-only wakeups never invoke event handlers; application `tick` events retain the configured `--tick-rate-ms` interval.
+
+The initial effect API does not expose raw TachyonFX DSL, spatial patterns, non-core effects, or handler-driven cancellation/completion events. See [`examples/effects.nu`](../examples/effects.nu) for seeded randomness, composition, filtering, subtree scoping, and a reactive ID/specification change that retriggers animation.
 
 ## Bar chart
 

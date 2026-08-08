@@ -129,7 +129,7 @@ The [`examples/`](examples/README.md) gallery also contains dependency-free Nush
 | `--on-event` | closure | Handles every terminal event |
 | `--on-key` | closure | Handles key press events |
 | `--quit-on-esc` | bool | Exit on Escape; defaults to `true` |
-| `--tick-rate-ms` | int | Redraw and tick interval; defaults to `250` |
+| `--tick-rate-ms` | int | Handler `tick` interval; defaults to `250` |
 
 Handlers receive one event record. Every event includes `type` and the current `state`; key events also contain `code`, `kind`, and `modifiers`, while mouse events contain coordinates, the mouse action, and `widget` when over an interactive widget.
 
@@ -155,3 +155,24 @@ Constraints are one-field records: `{length: 3}`, `{percentage: 50}`, `{min: 10}
 Widget presentation fields include `title`, `border`, `border-type` (`plain`, `rounded`, `double`, or `thick`), `style`, and `border-style`. Styles accept `fg`, `bg`, `bold`, `italic`, `underlined`, `reversed`, and `dim`. Colors may be Ratatui color names, hex strings such as `#5fd7ff`, or indexed color integers from 0 to 255.
 
 Use `tui style --fg cyan --bold` to construct a validated style record for any style-bearing widget flag. Boolean switches accept explicit false values with equals syntax, such as `--underlined=false`; `--underline` is also accepted as an alias.
+
+## Effects
+
+Wrap any widget subtree with `{type: effect id: string effect: record child: record}` or `tui effect <id> <effect> <child>`. The child renders normally, then TachyonFX transforms only the rectangle allocated to that wrapper. IDs must be unique in one widget tree. An ID starts on first appearance, preserves progress across equivalent reactive redraws, and restarts when either its ID or effect record changes.
+
+Typed constructors return ordinary records, so they can be stored, composed, or authored by hand:
+
+```nu
+let text = tui effect filter text
+let reveal = tui effect coalesce 500 --filter $text --seed 42
+let tint = tui effect fade-from-fg cyan 700 --interpolation sine-in-out --filter $text
+let animation = tui effect sequence [$reveal $tint]
+
+tui effect intro $animation (tui paragraph "Hello" --style {fg: white})
+```
+
+Leaf constructors are `fade-from`, `fade-to`, `fade-from-fg`, `fade-to-fg`, `dissolve`, `coalesce`, `sweep-in`, `sweep-out`, `slide-in`, and `slide-out`. Compose them with `sequence`, `parallel`, `repeat`, and `ping-pong`; filters are `text`, `non-empty`, `fg-color`, `bg-color`, `not`, `all-of`, and `any-of` under `tui effect filter ...`.
+
+Effects animate at about 60 FPS using actual elapsed time. These animation-only redraws do not invoke handlers; `tick` events continue at `--tick-rate-ms`. See the complete schemas in [`doc/widgets.md`](doc/widgets.md) and the reactive, seeded [`examples/effects.nu`](examples/effects.nu).
+
+The initial effects API intentionally excludes raw TachyonFX DSL, spatial patterns, non-core effects, and handler-driven cancellation or completion events.

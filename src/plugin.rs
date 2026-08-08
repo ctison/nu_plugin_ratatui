@@ -1,6 +1,7 @@
 use nu_plugin::{Plugin, PluginCommand};
 
 use crate::{
+  effect::{EffectCommandKind, TuiEffect},
   example::TuiExample,
   run::Tui,
   style::TuiStyle,
@@ -30,6 +31,11 @@ impl Plugin for TuiPlugin {
         .map(TuiWidget::new)
         .map(|command| Box::new(command) as Box<dyn PluginCommand<Plugin = Self>>),
     );
+    commands.extend(
+      EffectCommandKind::ALL
+        .map(TuiEffect::new)
+        .map(|command| Box::new(command) as Box<dyn PluginCommand<Plugin = Self>>),
+    );
     commands
   }
 }
@@ -39,6 +45,7 @@ mod tests {
   use nu_plugin::Plugin;
 
   use super::TuiPlugin;
+  use crate::effect::EffectCommandKind;
 
   /// Verifies that the application runs at the namespace root without a run subcommand.
   #[test]
@@ -52,6 +59,14 @@ mod tests {
     assert!(names.iter().any(|name| name == "tui"));
     assert!(names.iter().any(|name| name == "tui example"));
     assert!(names.iter().any(|name| name == "tui style"));
+    assert!(names.iter().any(|name| name == "tui effect"));
+    assert!(names.iter().any(|name| name == "tui effect fade-to-fg"));
+    assert!(names.iter().any(|name| name == "tui effect filter all-of"));
+    assert!(
+      EffectCommandKind::ALL
+        .iter()
+        .all(|kind| names.iter().any(|name| name == kind.command_name()))
+    );
     assert!(!names.iter().any(|name| name == "tui run"));
   }
 

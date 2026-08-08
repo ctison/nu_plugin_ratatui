@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::Duration};
+use std::{collections::HashSet, str::FromStr, time::Duration};
 
 use ansi_to_tui::IntoText as _;
 use nu_protocol::{LabeledError, Record, Span, Spanned, Value, engine::Closure};
@@ -9,6 +9,8 @@ use ratatui::{
   text::Text,
   widgets::{BorderType, Borders, GraphType, ScrollbarOrientation},
 };
+
+use crate::effect::EffectSpec;
 
 /// A Nushell closure paired with the source span that supplied it.
 pub type Handler = Spanned<Closure>;
@@ -73,6 +75,11 @@ pub struct CanvasPoint {
 /// A declarative widget tree parsed from a Nushell record.
 #[derive(Clone, Debug)]
 pub enum UiNode {
+  Effect {
+    id: String,
+    effect: EffectSpec,
+    child: Box<UiNode>,
+  },
   Layout {
     direction: Direction,
     constraints: Vec<Constraint>,
@@ -238,10 +245,19 @@ impl AppConfig {
 impl UiNode {
   /// Parses a widget record and all nested children.
   pub fn parse(value: &Value) -> Result<Self, LabeledError> {
+    Self::parse_with_effect_ids(value, &mut HashSet::new())
+  }
+
+  /// Parses a widget record while rejecting repeated effect wrapper IDs.
+  fn parse_with_effect_ids(
+    value: &Value,
+    effect_ids: &mut HashSet<String>,
+  ) -> Result<Self, LabeledError> {
     let record = as_record(value, "widget")?;
     let widget_type = required_string(record, "type", value.span())?;
     match widget_type.as_str() {
-      "layout" => parse_layout(record, value.span()),
+      "effect" => parse_effect_wrapper(record, value, effect_ids),
+      "layout" => parse_layout(record, value.span(), effect_ids),
       "paragraph" => parse_paragraph(record, value.span()),
       "button" => parse_button(record, value.span()),
       "list" => parse_list(record, value.span()),
@@ -273,8 +289,35 @@ impl UiNode {
   }
 }
 
+/// Parses a stateful effect wrapper and its single child subtree.
+fn parse_effect_wrapper(
+  record: &Record,
+  value: &Value,
+  effect_ids: &mut HashSet<String>,
+) -> Result<UiNode, LabeledError> {
+  let id = required_string(record, "id", value.span())?;
+  if !effect_ids.insert(id.clone()) {
+    return Err(config_error(
+      format!("duplicate effect wrapper ID `{id}`"),
+      record.get("id").map(Value::span).unwrap_or(value.span()),
+    ));
+  }
+  Ok(UiNode::Effect {
+    id,
+    effect: EffectSpec::parse(required(record, "effect", value.span())?)?,
+    child: Box::new(UiNode::parse_with_effect_ids(
+      required(record, "child", value.span())?,
+      effect_ids,
+    )?),
+  })
+}
+
 /// Parses a layout node with constraints matched to its children.
-fn parse_layout(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+fn parse_layout(
+  record: &Record,
+  span: Span,
+  effect_ids: &mut HashSet<String>,
+) -> Result<UiNode, LabeledError> {
   let direction = match optional_string(record, "direction")?.as_deref() {
     None | Some("vertical") => Direction::Vertical,
     Some("horizontal") => Direction::Horizontal,
@@ -290,7 +333,7 @@ fn parse_layout(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
     .map_err(|error| LabeledError::from_diagnostic(&error))?;
   let children = child_values
     .iter()
-    .map(UiNode::parse)
+    .map(|child| UiNode::parse_with_effect_ids(child, effect_ids))
     .collect::<Result<Vec<_>, _>>()?;
   let constraints = match record.get("constraints") {
     Some(value) => value
@@ -943,7 +986,7 @@ fn optional_style(record: &Record, field: &str) -> Result<Option<Style>, Labeled
 }
 
 /// Parses a named, indexed, or hexadecimal Ratatui color.
-fn parse_color(value: &Value) -> Result<Color, LabeledError> {
+pub(crate) fn parse_color(value: &Value) -> Result<Color, LabeledError> {
   match value {
     Value::Int { val, .. } => u8::try_from(*val)
       .map(Color::Indexed)

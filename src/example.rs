@@ -91,6 +91,10 @@ const EXAMPLES: &[EmbeddedExample] = &[
     source: include_str!("../examples/demo2.nu"),
   },
   EmbeddedExample {
+    name: "effects",
+    source: include_str!("../examples/effects.nu"),
+  },
+  EmbeddedExample {
     name: "gauge",
     source: include_str!("../examples/gauge.nu"),
   },

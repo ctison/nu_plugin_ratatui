@@ -1,4 +1,7 @@
-use std::io::{self, stdout};
+use std::{
+  io::{self, stdout},
+  time::{Duration, Instant},
+};
 
 use nu_plugin::{EngineInterface, EvaluatedCall, SimplePluginCommand};
 use nu_protocol::{
@@ -17,6 +20,7 @@ use crossterm::{
 
 use crate::{
   config::{AppConfig, Handler, UiNode},
+  effect::{ANIMATION_FRAME, EffectRegistry},
   plugin::TuiPlugin,
   ui::HitTarget,
 };
@@ -89,7 +93,7 @@ impl SimplePluginCommand for Tui {
       .named(
         "tick-rate-ms",
         SyntaxShape::Int,
-        "Event polling and redraw interval in milliseconds (default: 250)",
+        "Handler tick interval in milliseconds (default: 250)",
         None,
       )
       .input_output_type(Type::Nothing, Type::Any)
@@ -310,22 +314,37 @@ fn run_loop(
     view: config.view.clone(),
     quit: false,
   };
+  let mut effects = EffectRegistry::default();
+  let mut last_frame = Instant::now();
+  let mut next_tick = last_frame + config.tick_rate;
 
   while !app.quit {
-    let mut hits = draw_view(engine, terminal, &app, span)?;
-    let event = if event::poll(config.tick_rate)
+    let frame_started = Instant::now();
+    let elapsed = frame_started.saturating_duration_since(last_frame);
+    last_frame = frame_started;
+    let (mut hits, effects_running) =
+      draw_view(engine, terminal, &app, &mut effects, elapsed, span)?;
+    let timeout = poll_timeout(Instant::now(), frame_started, next_tick, effects_running);
+    let event = if event::poll(timeout)
       .map_err(|error| labeled_io_error("failed to poll terminal events", &error, span))?
     {
       let terminal_event = event::read()
         .map_err(|error| labeled_io_error("failed to read terminal event", &error, span))?;
-      dispatch_event(terminal_event, &mut hits, span)
-    } else {
-      DispatchEvent {
+      Some(dispatch_event(terminal_event, &mut hits, span))
+    } else if Instant::now() >= next_tick {
+      next_tick = Instant::now() + config.tick_rate;
+      Some(DispatchEvent {
         value: record_value(vec![("type", Value::string("tick", span))], span),
         button_handler: None,
         is_key_press: false,
         force_quit: false,
-      }
+      })
+    } else {
+      None
+    };
+
+    let Some(event) = event else {
+      continue;
     };
 
     if let Some(handler) = event.button_handler {
@@ -355,8 +374,10 @@ fn draw_view(
   engine: &EngineInterface,
   terminal: &mut DefaultTerminal,
   app: &AppState,
+  effects: &mut EffectRegistry,
+  elapsed: Duration,
   span: Span,
-) -> Result<Vec<HitTarget>, LabeledError> {
+) -> Result<(Vec<HitTarget>, bool), LabeledError> {
   let view_value = match &app.view {
     Value::Closure { val, .. } => {
       let closure = Spanned {
@@ -371,12 +392,29 @@ fn draw_view(
   };
   let root = UiNode::parse(&view_value)?;
   let mut hits = Vec::new();
+  effects.begin_frame(elapsed);
   terminal
     .draw(|frame| {
-      root.render(frame, frame.area(), &mut hits);
+      root.render_with_effects(frame, frame.area(), &mut hits, effects);
     })
     .map_err(|error| labeled_io_error("failed to draw terminal frame", &error, span))?;
-  Ok(hits)
+  effects.end_frame();
+  Ok((hits, effects.any_running()))
+}
+
+/// Computes the next input wait without coupling animation frames to handler ticks.
+fn poll_timeout(
+  now: Instant,
+  last_frame: Instant,
+  next_tick: Instant,
+  effects_running: bool,
+) -> Duration {
+  let tick_wait = next_tick.saturating_duration_since(now);
+  if effects_running {
+    tick_wait.min((last_frame + ANIMATION_FRAME).saturating_duration_since(now))
+  } else {
+    tick_wait
+  }
 }
 
 /// Converts one Crossterm event into a Nushell event record and handler target.
@@ -633,12 +671,15 @@ fn labeled_io_error(context: &str, error: &io::Error, span: Span) -> LabeledErro
 
 #[cfg(test)]
 mod tests {
+  use std::time::{Duration, Instant};
+
   use nu_plugin::{EvaluatedCall, SimplePluginCommand};
   use nu_protocol::{IntoSpanned, Record, Span, Value};
   use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
   use super::{
     AppState, Tui, apply_handler_result, is_escape_event, key_event_value, parse_config,
+    poll_timeout,
   };
 
   /// Verifies root help documents closure parameters, pipeline input, and result types.
@@ -757,5 +798,30 @@ mod tests {
 
     assert!(is_escape_event(&press));
     assert!(!is_escape_event(&repeat));
+  }
+
+  /// Verifies animations wake near 60 FPS without making the handler tick due.
+  #[test]
+  fn schedules_animation_frames_independently_from_ticks() {
+    let frame = Instant::now();
+    let tick = frame + Duration::from_millis(250);
+
+    assert_eq!(
+      poll_timeout(frame, frame, tick, true),
+      Duration::from_millis(16)
+    );
+    let animation_wakeup = frame + Duration::from_millis(16);
+    assert!(
+      animation_wakeup < tick,
+      "animation-only wakeup is not a tick"
+    );
+    assert_eq!(
+      poll_timeout(animation_wakeup, frame, tick, true),
+      Duration::ZERO
+    );
+    assert_eq!(
+      poll_timeout(frame, frame, tick, false),
+      Duration::from_millis(250)
+    );
   }
 }
