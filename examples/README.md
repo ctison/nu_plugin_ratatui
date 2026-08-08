@@ -51,6 +51,8 @@ These 26 scripts adapt examples from [Ratatui's `examples/apps` directory](https
 
 [`counter.nu`](counter.nu) is the plugin's original mouse-handler example rather than an upstream port.
 [`effects.nu`](effects.nu) demonstrates seeded, filtered, subtree-scoped TachyonFX composition and reactive retriggering.
+[`tui-widgets.nu`](tui-widgets.nu) shows the additional bar graph, big text, box text, card,
+equalizer, popup, prompt, QR code, fractional scrollbar, and scroll-view widgets.
 [`command-preview.nu`](command-preview.nu) demonstrates a two-column selector that runs Git
 subcommands on selection and displays cached ANSI output with two-axis scrolling.
 

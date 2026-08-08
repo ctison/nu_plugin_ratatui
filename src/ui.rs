@@ -1,17 +1,32 @@
 use ratatui::{
   Frame,
-  layout::Rect,
+  buffer::Buffer,
+  layout::{Position, Rect, Size},
+  symbols::border,
+  text::{Line, Text},
   widgets::{
     Axis, Bar, BarChart, Block, Chart, Clear, Dataset, Fill, Gauge, LineGauge, List, ListItem,
     MascotEyeColor, Paragraph, RatatuiLogo, RatatuiLogoSize, RatatuiMascot, RenderDirection, Row,
-    Scrollbar, ScrollbarState, Sparkline, Table, Tabs, Wrap,
+    Scrollbar, ScrollbarState, Sparkline, StatefulWidget, Table, Tabs, Widget, Wrap,
     calendar::{CalendarEventStore, Monthly},
     canvas::{Canvas, Points},
   },
 };
+use tui_widgets::{
+  bar_graph::BarGraph,
+  big_text::BigText,
+  box_text::BoxChar,
+  cards::Card,
+  equalizer::{Band, Equalizer},
+  popup::{KnownSizeWrapper, Popup},
+  prompts::{SelectOptionList, SelectPrompt, SelectState, TextPrompt, TextState},
+  qrcode::QrCodeWidget,
+  scrollbar::{GlyphSet, ScrollBar as FractionalScrollbar, ScrollLengths},
+  scrollview::{ScrollView, ScrollViewState},
+};
 
 use crate::{
-  config::{AxisSpec, BlockSpec, Handler, UiNode},
+  config::{AxisSpec, BlockSpec, FractionalGlyphs, Handler, SuiteWidget, UiNode},
   effect::EffectRegistry,
 };
 
@@ -32,10 +47,21 @@ impl UiNode {
     hits: &mut Vec<HitTarget>,
     effects: &mut EffectRegistry,
   ) {
+    self.render_to_buffer(frame.buffer_mut(), area, hits, effects);
+  }
+
+  /// Renders a widget tree into any Ratatui buffer, including off-screen scroll buffers.
+  fn render_to_buffer(
+    &self,
+    buffer: &mut Buffer,
+    area: Rect,
+    hits: &mut Vec<HitTarget>,
+    effects: &mut EffectRegistry,
+  ) {
     match self {
       Self::Effect { id, effect, child } => {
-        child.render_with_effects(frame, area, hits, effects);
-        effects.apply(id, effect, frame, area);
+        child.render_to_buffer(buffer, area, hits, effects);
+        effects.apply(id, effect, buffer, area);
       },
       Self::Layout {
         direction,
@@ -47,7 +73,7 @@ impl UiNode {
           .constraints(constraints.clone())
           .split(area);
         for (child, child_area) in children.iter().zip(areas.iter().copied()) {
-          child.render_with_effects(frame, child_area, hits, effects);
+          child.render_to_buffer(buffer, child_area, hits, effects);
         }
       },
       Self::Paragraph {
@@ -66,7 +92,7 @@ impl UiNode {
         if *wrap {
           widget = widget.wrap(Wrap { trim: true });
         }
-        frame.render_widget(widget, area);
+        widget.render(area, buffer);
       },
       Self::Button {
         id,
@@ -79,7 +105,7 @@ impl UiNode {
           .alignment(*alignment)
           .style(block.style)
           .block(make_block(block));
-        frame.render_widget(widget, area);
+        widget.render(area, buffer);
         hits.push(HitTarget {
           id: id.clone(),
           area,
@@ -91,9 +117,10 @@ impl UiNode {
           .iter()
           .map(|item| ListItem::new(item.as_str()))
           .collect::<Vec<_>>();
-        frame.render_widget(
+        Widget::render(
           List::new(items).style(block.style).block(make_block(block)),
           area,
+          buffer,
         );
       },
       Self::Gauge {
@@ -110,7 +137,7 @@ impl UiNode {
         if let Some(label) = label {
           gauge = gauge.label(label.as_str());
         }
-        frame.render_widget(gauge, area);
+        gauge.render(area, buffer);
       },
       Self::BarChart {
         bars,
@@ -143,7 +170,7 @@ impl UiNode {
         if let Some(max) = max {
           widget = widget.max(*max);
         }
-        frame.render_widget(widget, area);
+        Widget::render(widget, area, buffer);
       },
       Self::Calendar {
         year,
@@ -183,7 +210,7 @@ impl UiNode {
         if let Some(style) = show_surrounding {
           widget = widget.show_surrounding(*style);
         }
-        frame.render_widget(widget, area);
+        widget.render(area, buffer);
       },
       Self::Canvas {
         points,
@@ -207,7 +234,7 @@ impl UiNode {
               });
             }
           });
-        frame.render_widget(widget, area);
+        widget.render(area, buffer);
       },
       Self::Chart {
         datasets,
@@ -235,11 +262,13 @@ impl UiNode {
           .x_axis(make_axis(x_axis))
           .y_axis(make_axis(y_axis))
           .style(*style);
-        frame.render_widget(widget, area);
+        widget.render(area, buffer);
       },
-      Self::Clear => frame.render_widget(Clear, area),
+      Self::Clear => Clear.render(area, buffer),
       Self::Fill { symbol, style } => {
-        frame.render_widget(Fill::new(symbol.as_str()).style(*style), area);
+        Fill::new(symbol.as_str())
+          .style(*style)
+          .render(area, buffer);
       },
       Self::LineGauge {
         ratio,
@@ -260,23 +289,25 @@ impl UiNode {
         if let Some(label) = label {
           widget = widget.label(label.as_str());
         }
-        frame.render_widget(widget, area);
+        widget.render(area, buffer);
       },
-      Self::Logo { small } => frame.render_widget(
+      Self::Logo { small } => Widget::render(
         RatatuiLogo::new(if *small {
           RatatuiLogoSize::Small
         } else {
           RatatuiLogoSize::Tiny
         }),
         area,
+        buffer,
       ),
-      Self::Mascot { blink } => frame.render_widget(
+      Self::Mascot { blink } => Widget::render(
         RatatuiMascot::new().set_eye(if *blink {
           MascotEyeColor::Red
         } else {
           MascotEyeColor::Default
         }),
         area,
+        buffer,
       ),
       Self::Scrollbar {
         content_length,
@@ -292,7 +323,7 @@ impl UiNode {
         let mut state = ScrollbarState::new(*content_length)
           .position(*position)
           .viewport_content_length(*viewport_length);
-        frame.render_stateful_widget(widget, area, &mut state);
+        StatefulWidget::render(widget, area, buffer, &mut state);
       },
       Self::Sparkline {
         data,
@@ -317,7 +348,7 @@ impl UiNode {
         if let Some(max) = max {
           widget = widget.max(*max);
         }
-        frame.render_widget(widget, area);
+        widget.render(area, buffer);
       },
       Self::Table {
         rows,
@@ -338,7 +369,7 @@ impl UiNode {
         if let Some(header) = header {
           widget = widget.header(Row::new(header.iter().map(String::as_str)));
         }
-        frame.render_widget(widget, area);
+        Widget::render(widget, area, buffer);
       },
       Self::Tabs {
         titles,
@@ -347,7 +378,7 @@ impl UiNode {
         block,
         style,
         highlight_style,
-      } => frame.render_widget(
+      } => Widget::render(
         Tabs::new(titles.iter().map(String::as_str))
           .select(*selected)
           .divider(divider.as_str())
@@ -355,10 +386,230 @@ impl UiNode {
           .style(*style)
           .highlight_style(*highlight_style),
         area,
+        buffer,
       ),
+      Self::Suite(widget) => render_suite_widget(widget, buffer, area, hits, effects),
       Self::Spacer => {},
     }
   }
+}
+
+/// Renders one widget supplied by the external `tui-widgets` suite.
+fn render_suite_widget(
+  widget: &SuiteWidget,
+  buffer: &mut Buffer,
+  area: Rect,
+  hits: &mut Vec<HitTarget>,
+  effects: &mut EffectRegistry,
+) {
+  match widget {
+    SuiteWidget::BarGraph {
+      data,
+      min,
+      max,
+      bar_style,
+    } => {
+      let mut widget = BarGraph::new(data.clone()).with_bar_style(*bar_style);
+      if let Some(min) = min {
+        widget = widget.with_min(*min);
+      }
+      if let Some(max) = max {
+        widget = widget.with_max(*max);
+      }
+      widget.render(area, buffer);
+    },
+    SuiteWidget::BigText {
+      text,
+      block,
+      alignment,
+      pixel_size,
+    } => {
+      BigText::builder()
+        .lines(vec![Line::raw(text.clone())])
+        .style(block.style)
+        .alignment(*alignment)
+        .pixel_size(*pixel_size)
+        .block(make_block(block))
+        .build()
+        .render(area, buffer);
+    },
+    SuiteWidget::BoxText { character } => BoxChar::new(*character).render(area, buffer),
+    SuiteWidget::Card { rank, suit } => Card::new(*rank, *suit).render(area, buffer),
+    SuiteWidget::Equalizer { bands, brightness } => Equalizer {
+      bands: bands.iter().copied().map(Band::from).collect(),
+      brightness: *brightness,
+    }
+    .render(area, buffer),
+    SuiteWidget::Popup {
+      text,
+      block,
+      width,
+      height,
+    } => {
+      let body = Text::raw(text.clone());
+      let measured_width = body.width();
+      let measured_height = body.height();
+      let body = KnownSizeWrapper::new(
+        body,
+        width.unwrap_or(measured_width),
+        height.unwrap_or(measured_height),
+      );
+      Widget::render(
+        Popup::new(body)
+          .title(Line::raw(block.title.clone().unwrap_or_default()))
+          .style(block.style)
+          .borders(block.borders)
+          .border_set(popup_border_set(block.border_type))
+          .border_style(block.border_style),
+        area,
+        buffer,
+      );
+    },
+    SuiteWidget::TextPrompt {
+      message,
+      value,
+      status,
+      focus,
+      render_style,
+      show_status,
+      block,
+    } => {
+      let mut prompt = TextPrompt::new(message.clone().into())
+        .with_block(make_block(block))
+        .with_render_style(*render_style);
+      if !show_status {
+        prompt = prompt.without_status_symbol();
+      }
+      let mut state = TextState::new()
+        .with_value(value.clone())
+        .with_status(*status)
+        .with_focus(*focus);
+      StatefulWidget::render(prompt, area, buffer, &mut state);
+    },
+    SuiteWidget::SelectPrompt {
+      label,
+      options,
+      selected,
+      status,
+      focus,
+      block,
+    } => {
+      let options = SelectOptionList::from(options.clone());
+      let prompt = SelectPrompt::new(label.clone().into(), options).with_block(make_block(block));
+      let mut state = SelectState::new().with_status(*status).with_focus(*focus);
+      state.set_focused_index(*selected);
+      StatefulWidget::render(prompt, area, buffer, &mut state);
+    },
+    SuiteWidget::QrCode {
+      data,
+      quiet_zone,
+      scaling,
+      colors,
+      style,
+    } => QrCodeWidget::new(qrcode::QrCode::new(data.as_bytes()).expect("validated QR data"))
+      .quiet_zone(*quiet_zone)
+      .scaling(*scaling)
+      .colors(*colors)
+      .style(*style)
+      .render(area, buffer),
+    SuiteWidget::FractionalScrollbar {
+      content_length,
+      viewport_length,
+      position,
+      orientation,
+      arrows,
+      glyphs,
+      track_style,
+      thumb_style,
+      arrow_style,
+    } => FractionalScrollbar::new(
+      *orientation,
+      ScrollLengths {
+        content_len: *content_length,
+        viewport_len: *viewport_length,
+      },
+    )
+    .offset(*position)
+    .arrows(*arrows)
+    .glyph_set(match glyphs {
+      FractionalGlyphs::Minimal => GlyphSet::minimal(),
+      FractionalGlyphs::BoxDrawing => GlyphSet::box_drawing(),
+      FractionalGlyphs::Legacy => GlyphSet::symbols_for_legacy_computing(),
+      FractionalGlyphs::Unicode => GlyphSet::unicode(),
+    })
+    .track_style(*track_style)
+    .thumb_style(*thumb_style)
+    .arrow_style(*arrow_style)
+    .render(area, buffer),
+    SuiteWidget::ScrollView {
+      width,
+      height,
+      scroll_x,
+      scroll_y,
+      vertical_scrollbar,
+      horizontal_scrollbar,
+      child,
+    } => {
+      let mut scroll_view = ScrollView::new(Size::new(*width, *height))
+        .vertical_scrollbar_visibility(*vertical_scrollbar)
+        .horizontal_scrollbar_visibility(*horizontal_scrollbar);
+      let content_area = scroll_view.area();
+      let mut child_hits = Vec::new();
+      child.render_to_buffer(
+        scroll_view.buf_mut(),
+        content_area,
+        &mut child_hits,
+        effects,
+      );
+      let mut state = ScrollViewState::with_offset(Position::new(*scroll_x, *scroll_y));
+      StatefulWidget::render(&scroll_view, area, buffer, &mut state);
+      let offset = state.offset();
+      hits.extend(
+        child_hits
+          .into_iter()
+          .filter_map(|hit| translate_scrolled_hit(hit, area, offset)),
+      );
+    },
+  }
+}
+
+/// Maps Ratatui border types to the popup crate's symbol sets.
+fn popup_border_set(border_type: ratatui::widgets::BorderType) -> border::Set<'static> {
+  match border_type {
+    ratatui::widgets::BorderType::Plain => border::PLAIN,
+    ratatui::widgets::BorderType::Rounded => border::ROUNDED,
+    ratatui::widgets::BorderType::Double => border::DOUBLE,
+    ratatui::widgets::BorderType::Thick => border::THICK,
+    ratatui::widgets::BorderType::QuadrantInside => border::QUADRANT_INSIDE,
+    ratatui::widgets::BorderType::QuadrantOutside => border::QUADRANT_OUTSIDE,
+    _ => border::PLAIN,
+  }
+}
+
+/// Translates an off-screen child hit target into the visible scroll-view rectangle.
+fn translate_scrolled_hit(
+  mut hit: HitTarget,
+  viewport: Rect,
+  offset: Position,
+) -> Option<HitTarget> {
+  let left = i32::from(viewport.x) + i32::from(hit.area.x) - i32::from(offset.x);
+  let top = i32::from(viewport.y) + i32::from(hit.area.y) - i32::from(offset.y);
+  let right = left + i32::from(hit.area.width);
+  let bottom = top + i32::from(hit.area.height);
+  let clipped_left = left.max(i32::from(viewport.x));
+  let clipped_top = top.max(i32::from(viewport.y));
+  let clipped_right = right.min(i32::from(viewport.right()));
+  let clipped_bottom = bottom.min(i32::from(viewport.bottom()));
+  if clipped_left >= clipped_right || clipped_top >= clipped_bottom {
+    return None;
+  }
+  hit.area = Rect::new(
+    clipped_left as u16,
+    clipped_top as u16,
+    (clipped_right - clipped_left) as u16,
+    (clipped_bottom - clipped_top) as u16,
+  );
+  Some(hit)
 }
 
 impl HitTarget {
@@ -498,5 +749,75 @@ mod tests {
     let buffer = terminal.backend().buffer();
     assert_eq!(buffer.cell((0, 0)).expect("first cell").symbol(), "g");
     assert_eq!(buffer.cell((1, 0)).expect("second cell").symbol(), "h");
+  }
+
+  /// Verifies the suite's prompt widget renders its declarative value snapshot.
+  #[test]
+  fn renders_tui_widgets_text_prompt() {
+    let prompt = record(vec![
+      ("type", Value::test_string("text-prompt")),
+      ("message", Value::test_string("Name")),
+      ("value", Value::test_string("Ada")),
+      ("focused", Value::test_bool(true)),
+    ]);
+    let node = UiNode::parse(&prompt).expect("valid text prompt");
+    let backend = TestBackend::new(30, 3);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+
+    terminal
+      .draw(|frame| render(&node, frame, &mut Vec::new()))
+      .expect("draw succeeds");
+
+    let rendered = terminal.backend().to_string();
+    assert!(rendered.contains("Name"));
+    assert!(rendered.contains("Ada"));
+  }
+
+  /// Verifies QR payloads render through the suite rather than a hand-built approximation.
+  #[test]
+  fn renders_tui_widgets_qr_code() {
+    let qr_code = record(vec![
+      ("type", Value::test_string("qr-code")),
+      ("data", Value::test_string("nu_plugin_ratatui")),
+      ("no-quiet-zone", Value::test_bool(true)),
+    ]);
+    let node = UiNode::parse(&qr_code).expect("valid QR code");
+    let backend = TestBackend::new(40, 20);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+
+    terminal
+      .draw(|frame| render(&node, frame, &mut Vec::new()))
+      .expect("draw succeeds");
+
+    assert!(terminal.backend().to_string().contains('█'));
+  }
+
+  /// Verifies scroll views render their child into an off-screen buffer at the requested offset.
+  #[test]
+  fn renders_tui_widgets_scroll_view_offset() {
+    let child = record(vec![
+      ("type", Value::test_string("paragraph")),
+      ("text", Value::test_string("first\nsecond\nthird")),
+      ("wrap", Value::test_bool(false)),
+    ]);
+    let scroll_view = record(vec![
+      ("type", Value::test_string("scroll-view")),
+      ("width", Value::test_int(10)),
+      ("height", Value::test_int(3)),
+      ("child", child),
+      ("scroll-y", Value::test_int(1)),
+      ("vertical-scrollbar", Value::test_string("never")),
+      ("horizontal-scrollbar", Value::test_string("never")),
+    ]);
+    let node = UiNode::parse(&scroll_view).expect("valid scroll view");
+    let backend = TestBackend::new(10, 1);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+
+    terminal
+      .draw(|frame| render(&node, frame, &mut Vec::new()))
+      .expect("draw succeeds");
+
+    let rendered = terminal.backend().to_string();
+    assert!(rendered.contains("second"), "rendered {rendered:?}");
   }
 }

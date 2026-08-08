@@ -139,6 +139,10 @@ const EXAMPLES: &[EmbeddedExample] = &[
     source: include_str!("../examples/todo-list.nu"),
   },
   EmbeddedExample {
+    name: "tui-widgets",
+    source: include_str!("../examples/tui-widgets.nu"),
+  },
+  EmbeddedExample {
     name: "user-input",
     source: include_str!("../examples/user-input.nu"),
   },

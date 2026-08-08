@@ -24,12 +24,23 @@ pub(crate) enum WidgetKind {
   Sparkline,
   Table,
   Tabs,
+  BarGraph,
+  BigText,
+  BoxText,
+  Card,
+  Equalizer,
+  Popup,
+  TextPrompt,
+  SelectPrompt,
+  QrCode,
+  FractionalScrollbar,
+  ScrollView,
   Spacer,
 }
 
 impl WidgetKind {
   /// Contains every supported widget in command registration order.
-  pub(crate) const ALL: [Self; 19] = [
+  pub(crate) const ALL: [Self; 30] = [
     Self::BarChart,
     Self::Calendar,
     Self::Canvas,
@@ -48,6 +59,17 @@ impl WidgetKind {
     Self::Sparkline,
     Self::Table,
     Self::Tabs,
+    Self::BarGraph,
+    Self::BigText,
+    Self::BoxText,
+    Self::Card,
+    Self::Equalizer,
+    Self::Popup,
+    Self::TextPrompt,
+    Self::SelectPrompt,
+    Self::QrCode,
+    Self::FractionalScrollbar,
+    Self::ScrollView,
     Self::Spacer,
   ];
 
@@ -72,6 +94,17 @@ impl WidgetKind {
       Self::Sparkline => "sparkline",
       Self::Table => "table",
       Self::Tabs => "tabs",
+      Self::BarGraph => "bar-graph",
+      Self::BigText => "big-text",
+      Self::BoxText => "box-text",
+      Self::Card => "card",
+      Self::Equalizer => "equalizer",
+      Self::Popup => "popup",
+      Self::TextPrompt => "text-prompt",
+      Self::SelectPrompt => "select-prompt",
+      Self::QrCode => "qr-code",
+      Self::FractionalScrollbar => "fractional-scrollbar",
+      Self::ScrollView => "scroll-view",
       Self::Spacer => "spacer",
     }
   }
@@ -97,6 +130,17 @@ impl WidgetKind {
       Self::Sparkline => "tui sparkline",
       Self::Table => "tui table",
       Self::Tabs => "tui tabs",
+      Self::BarGraph => "tui bar-graph",
+      Self::BigText => "tui big-text",
+      Self::BoxText => "tui box-text",
+      Self::Card => "tui card",
+      Self::Equalizer => "tui equalizer",
+      Self::Popup => "tui popup",
+      Self::TextPrompt => "tui text-prompt",
+      Self::SelectPrompt => "tui select-prompt",
+      Self::QrCode => "tui qr-code",
+      Self::FractionalScrollbar => "tui fractional-scrollbar",
+      Self::ScrollView => "tui scroll-view",
       Self::Spacer => "tui spacer",
     }
   }
@@ -122,6 +166,17 @@ impl WidgetKind {
       Self::Sparkline => "Declare a sparkline widget",
       Self::Table => "Declare a table widget",
       Self::Tabs => "Declare a tabs widget",
+      Self::BarGraph => "Declare a tui-widgets subcell bar graph",
+      Self::BigText => "Declare tui-widgets oversized pixel text",
+      Self::BoxText => "Declare a tui-widgets box-drawing character",
+      Self::Card => "Declare a tui-widgets playing card",
+      Self::Equalizer => "Declare a tui-widgets equalizer",
+      Self::Popup => "Declare a tui-widgets centered popup",
+      Self::TextPrompt => "Declare a tui-widgets text prompt snapshot",
+      Self::SelectPrompt => "Declare a tui-widgets select prompt snapshot",
+      Self::QrCode => "Declare a tui-widgets QR code",
+      Self::FractionalScrollbar => "Declare a tui-widgets fractional scrollbar",
+      Self::ScrollView => "Declare a tui-widgets scroll view",
       Self::Spacer => "Declare a spacer widget",
     }
   }
@@ -142,6 +197,17 @@ impl WidgetKind {
       Self::Sparkline => &["data"],
       Self::Table => &["rows"],
       Self::Tabs => &["titles"],
+      Self::BarGraph => &["data"],
+      Self::BigText => &["text"],
+      Self::BoxText => &["character"],
+      Self::Card => &["rank", "suit"],
+      Self::Equalizer => &["bands"],
+      Self::Popup => &["text"],
+      Self::TextPrompt => &["message"],
+      Self::SelectPrompt => &["label", "options"],
+      Self::QrCode => &["data"],
+      Self::FractionalScrollbar => &["content-length", "viewport-length"],
+      Self::ScrollView => &["width", "height", "child"],
       Self::Clear | Self::Fill | Self::Logo | Self::Mascot | Self::Spacer => &[],
     }
   }
@@ -526,6 +592,156 @@ impl WidgetKind {
           ),
         false,
       ),
+      Self::BarGraph => signature
+        .required("data", list(SyntaxShape::Number), "Normalized or scaled samples")
+        .named("min", SyntaxShape::Number, "Lower graph bound (default: smallest sample)", None)
+        .named("max", SyntaxShape::Number, "Upper graph bound (default: largest sample)", None)
+        .named(
+          "bar-style",
+          SyntaxShape::String,
+          "braille, solid, quadrant, or octant (default: braille)",
+          None,
+        ),
+      Self::BigText => with_presentation(
+        signature
+          .required("text", SyntaxShape::String, "Text rendered with an 8x8 pixel font")
+          .named(
+            "alignment",
+            SyntaxShape::String,
+            "Text alignment (default: left)",
+            None,
+          )
+          .named(
+            "pixel-size",
+            SyntaxShape::String,
+            "full, half-height, half-width, quadrant, third-height, sextant, quarter-height, or octant (default: full)",
+            None,
+          ),
+        false,
+      ),
+      Self::BoxText => signature.required(
+        "character",
+        SyntaxShape::String,
+        "One character rendered with box-drawing glyphs",
+      ),
+      Self::Card => signature
+        .required("rank", SyntaxShape::String, "Card rank from ace through king")
+        .required("suit", SyntaxShape::String, "spades, hearts, diamonds, or clubs"),
+      Self::Equalizer => signature
+        .required("bands", list(SyntaxShape::Number), "Band levels from 0 to 1")
+        .named(
+          "brightness",
+          SyntaxShape::Number,
+          "Color brightness from 0 to 1 (default: 1)",
+          None,
+        ),
+      Self::Popup => with_presentation(
+        signature
+          .required("text", SyntaxShape::String, "Popup body text")
+          .named(
+            "width",
+            SyntaxShape::Int,
+            "Fixed inner width (default: measured from text)",
+            None,
+          )
+          .named(
+            "height",
+            SyntaxShape::Int,
+            "Fixed inner height (default: measured from text)",
+            None,
+          ),
+        true,
+      ),
+      Self::TextPrompt => with_presentation(
+        signature
+          .required("message", SyntaxShape::String, "Prompt label")
+          .named("value", SyntaxShape::String, "Current value (default: empty)", None)
+          .named(
+            "status",
+            SyntaxShape::String,
+            "pending, done, or aborted (default: pending)",
+            None,
+          )
+          .switch("focused", "Whether the prompt is focused (default: false)", None)
+          .named(
+            "render-style",
+            SyntaxShape::String,
+            "default, password, or invisible (default: default)",
+            None,
+          )
+          .switch("hide-status", "Hide the status symbol (default: false)", None),
+        false,
+      ),
+      Self::SelectPrompt => with_presentation(
+        signature
+          .required("label", SyntaxShape::String, "Prompt label")
+          .required("options", list(SyntaxShape::String), "Selectable option strings")
+          .named("selected", SyntaxShape::Int, "Focused option index (default: 0)", None)
+          .named(
+            "status",
+            SyntaxShape::String,
+            "pending, done, or aborted (default: pending)",
+            None,
+          )
+          .switch("focused", "Whether the prompt is focused (default: false)", None),
+        false,
+      ),
+      Self::QrCode => signature
+        .required("data", SyntaxShape::String, "Text encoded into the QR symbol")
+        .switch("no-quiet-zone", "Disable the surrounding quiet zone (default: false)", None)
+        .named(
+          "scaling",
+          SyntaxShape::String,
+          "exact, min, or max (default: exact)",
+          None,
+        )
+        .named("scale-width", SyntaxShape::Int, "Exact module width (default: 1)", None)
+        .named("scale-height", SyntaxShape::Int, "Exact module height (default: 1)", None)
+        .switch("inverted", "Invert light and dark modules (default: false)", None)
+        .named("style", record_shape(), "QR foreground and background style (default: black on white)", None),
+      Self::FractionalScrollbar => signature
+        .required("content-length", SyntaxShape::Int, "Total logical content length")
+        .required("viewport-length", SyntaxShape::Int, "Visible logical content length")
+        .named("position", SyntaxShape::Int, "Current logical offset (default: 0)", None)
+        .named(
+          "orientation",
+          SyntaxShape::String,
+          "vertical or horizontal (default: vertical)",
+          None,
+        )
+        .named(
+          "arrows",
+          SyntaxShape::String,
+          "none, start, end, or both (default: none)",
+          None,
+        )
+        .named(
+          "glyphs",
+          SyntaxShape::String,
+          "legacy, unicode, box-drawing, or minimal (default: legacy)",
+          None,
+        )
+        .named("track-style", record_shape(), "Track style (default: terminal default)", None)
+        .named("thumb-style", record_shape(), "Thumb style (default: terminal default)", None)
+        .named("arrow-style", record_shape(), "Arrow style (default: terminal default)", None),
+      Self::ScrollView => signature
+        .required("width", SyntaxShape::Int, "Off-screen content width")
+        .required("height", SyntaxShape::Int, "Off-screen content height")
+        .required("child", record_shape(), "Widget tree rendered into the scroll buffer")
+        .named("scroll-x", SyntaxShape::Int, "Horizontal offset (default: 0)", None)
+        .named("scroll-y", SyntaxShape::Int, "Vertical offset (default: 0)", None)
+        .named(
+          "vertical-scrollbar",
+          SyntaxShape::String,
+          "automatic, always, or never (default: automatic)",
+          None,
+        )
+        .named(
+          "horizontal-scrollbar",
+          SyntaxShape::String,
+          "automatic, always, or never (default: automatic)",
+          None,
+        ),
       Self::Spacer => signature,
     }
   }

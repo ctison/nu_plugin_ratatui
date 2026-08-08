@@ -146,6 +146,7 @@ Ctrl-C always exits. Escape exits unless `--quit-on-esc` is false.
 All widgets are records with a `type` field. Write them directly or construct them with `tui <type>` flags.
 
 - Ratatui widgets: `bar-chart`, `calendar`, `canvas`, `chart`, `clear`, `fill`, `gauge`, `line-gauge`, `list`, `logo`, `mascot`, `paragraph`, `scrollbar`, `sparkline`, `table`, and `tabs`.
+- [`tui-widgets`](https://crates.io/crates/tui-widgets) suite: `bar-graph`, `big-text`, `box-text`, `card`, `equalizer`, `popup`, `text-prompt`, `select-prompt`, `qr-code`, `fractional-scrollbar`, and `scroll-view`.
 - Plugin composition widgets: `layout`, `button`, and `spacer`.
 
 The records for data-driven widgets use ordinary Nu values: bar records for `bar-chart`, `[x y]` pairs for `chart`, point records for `canvas`, nested string lists for `table`, and integer or null samples for `sparkline`. See [`doc/widgets.md`](doc/widgets.md) for every field and a runnable record for each widget.

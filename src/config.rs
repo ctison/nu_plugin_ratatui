@@ -9,6 +9,15 @@ use ratatui::{
   text::Text,
   widgets::{BorderType, Borders, GraphType, ScrollbarOrientation},
 };
+use tui_widgets::{
+  bar_graph::BarStyle as SuiteBarStyle,
+  big_text::PixelSize,
+  cards::{Rank, Suit},
+  prompts::{FocusState, Status, TextRenderStyle},
+  qrcode::{Colors as QrColors, QuietZone, Scaling as QrScaling},
+  scrollbar::{ScrollBarArrows, ScrollBarOrientation as FractionalScrollbarOrientation},
+  scrollview::ScrollbarVisibility,
+};
 
 use crate::effect::EffectSpec;
 
@@ -70,6 +79,93 @@ pub struct CanvasPoint {
   pub x: f64,
   pub y: f64,
   pub color: Color,
+}
+
+/// Glyph family used by the suite's fractional scrollbar.
+#[derive(Clone, Copy, Debug)]
+pub enum FractionalGlyphs {
+  Minimal,
+  BoxDrawing,
+  Legacy,
+  Unicode,
+}
+
+/// Declarative widgets supplied by the external `tui-widgets` suite.
+#[derive(Clone, Debug)]
+pub enum SuiteWidget {
+  BarGraph {
+    data: Vec<f64>,
+    min: Option<f64>,
+    max: Option<f64>,
+    bar_style: SuiteBarStyle,
+  },
+  BigText {
+    text: String,
+    block: BlockSpec,
+    alignment: Alignment,
+    pixel_size: PixelSize,
+  },
+  BoxText {
+    character: char,
+  },
+  Card {
+    rank: Rank,
+    suit: Suit,
+  },
+  Equalizer {
+    bands: Vec<f64>,
+    brightness: f64,
+  },
+  Popup {
+    text: String,
+    block: BlockSpec,
+    width: Option<usize>,
+    height: Option<usize>,
+  },
+  TextPrompt {
+    message: String,
+    value: String,
+    status: Status,
+    focus: FocusState,
+    render_style: TextRenderStyle,
+    show_status: bool,
+    block: BlockSpec,
+  },
+  SelectPrompt {
+    label: String,
+    options: Vec<String>,
+    selected: usize,
+    status: Status,
+    focus: FocusState,
+    block: BlockSpec,
+  },
+  QrCode {
+    data: String,
+    quiet_zone: QuietZone,
+    scaling: QrScaling,
+    colors: QrColors,
+    style: Style,
+  },
+  FractionalScrollbar {
+    content_length: usize,
+    viewport_length: usize,
+    position: usize,
+    orientation: FractionalScrollbarOrientation,
+    arrows: ScrollBarArrows,
+    glyphs: FractionalGlyphs,
+    track_style: Style,
+    thumb_style: Style,
+    arrow_style: Style,
+  },
+  ScrollView {
+    width: u16,
+    height: u16,
+    scroll_x: u16,
+    scroll_y: u16,
+    vertical_scrollbar: ScrollbarVisibility,
+    horizontal_scrollbar: ScrollbarVisibility,
+    child: Box<UiNode>,
+  },
 }
 
 /// A declarative widget tree parsed from a Nushell record.
@@ -198,6 +294,7 @@ pub enum UiNode {
     style: Style,
     highlight_style: Style,
   },
+  Suite(SuiteWidget),
   Spacer,
 }
 
@@ -280,6 +377,17 @@ impl UiNode {
       "sparkline" => parse_sparkline(record, value.span()),
       "table" => parse_table(record, value.span()),
       "tabs" => parse_tabs(record, value.span()),
+      "bar-graph" => parse_bar_graph(record, value.span()),
+      "big-text" => parse_big_text(record, value.span()),
+      "box-text" => parse_box_text(record, value.span()),
+      "card" => parse_card(record, value.span()),
+      "equalizer" => parse_equalizer(record, value.span()),
+      "popup" => parse_popup(record, value.span()),
+      "text-prompt" => parse_text_prompt(record, value.span()),
+      "select-prompt" => parse_select_prompt(record, value.span()),
+      "qr-code" => parse_qr_code(record, value.span()),
+      "fractional-scrollbar" => parse_fractional_scrollbar(record, value.span()),
+      "scroll-view" => parse_scroll_view(record, value.span(), effect_ids),
       "spacer" => Ok(Self::Spacer),
       other => Err(config_error(
         format!("unsupported widget type `{other}`"),
@@ -783,6 +891,351 @@ fn parse_tabs(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
   })
 }
 
+/// Parses a `tui-widgets` subcell bar graph.
+fn parse_bar_graph(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let data = parse_number_list(required(record, "data", span)?, "data")?;
+  if data.is_empty() {
+    return Err(config_error("`data` must not be empty", span));
+  }
+  let min = optional_number(record, "min")?;
+  let max = optional_number(record, "max")?;
+  if min.zip(max).is_some_and(|(min, max)| min >= max) {
+    return Err(config_error("`min` must be less than `max`", span));
+  }
+  let bar_style = match optional_string(record, "bar-style")?.as_deref() {
+    None | Some("braille") => SuiteBarStyle::Braille,
+    Some("solid") => SuiteBarStyle::Solid,
+    Some("quadrant") => SuiteBarStyle::Quadrant,
+    Some("octant") => SuiteBarStyle::Octant,
+    Some(other) => {
+      return Err(config_error(
+        format!("unsupported bar style `{other}`"),
+        span,
+      ));
+    },
+  };
+  Ok(UiNode::Suite(SuiteWidget::BarGraph {
+    data,
+    min,
+    max,
+    bar_style,
+  }))
+}
+
+/// Parses oversized pixel text from the widget suite.
+fn parse_big_text(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let pixel_size = match optional_string(record, "pixel-size")?.as_deref() {
+    None | Some("full") => PixelSize::Full,
+    Some("half-height") => PixelSize::HalfHeight,
+    Some("half-width") => PixelSize::HalfWidth,
+    Some("quadrant") => PixelSize::Quadrant,
+    Some("third-height") => PixelSize::ThirdHeight,
+    Some("sextant") => PixelSize::Sextant,
+    Some("quarter-height") => PixelSize::QuarterHeight,
+    Some("octant") => PixelSize::Octant,
+    Some(other) => {
+      return Err(config_error(
+        format!("unsupported pixel size `{other}`"),
+        span,
+      ));
+    },
+  };
+  Ok(UiNode::Suite(SuiteWidget::BigText {
+    text: required_string(record, "text", span)?,
+    block: parse_block(record, false)?,
+    alignment: parse_alignment(record, span)?,
+    pixel_size,
+  }))
+}
+
+/// Parses one character rendered with box-drawing glyphs.
+fn parse_box_text(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let text = required_string(record, "character", span)?;
+  let mut characters = text.chars();
+  let character = characters
+    .next()
+    .ok_or_else(|| config_error("`character` must not be empty", span))?;
+  if characters.next().is_some() {
+    return Err(config_error(
+      "`character` must contain exactly one character",
+      span,
+    ));
+  }
+  Ok(UiNode::Suite(SuiteWidget::BoxText { character }))
+}
+
+/// Parses a standard playing card.
+fn parse_card(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let rank = match required_string(record, "rank", span)?
+    .to_ascii_lowercase()
+    .as_str()
+  {
+    "ace" | "a" => Rank::Ace,
+    "two" | "2" => Rank::Two,
+    "three" | "3" => Rank::Three,
+    "four" | "4" => Rank::Four,
+    "five" | "5" => Rank::Five,
+    "six" | "6" => Rank::Six,
+    "seven" | "7" => Rank::Seven,
+    "eight" | "8" => Rank::Eight,
+    "nine" | "9" => Rank::Nine,
+    "ten" | "10" => Rank::Ten,
+    "jack" | "j" => Rank::Jack,
+    "queen" | "q" => Rank::Queen,
+    "king" | "k" => Rank::King,
+    other => {
+      return Err(config_error(
+        format!("unsupported card rank `{other}`"),
+        span,
+      ));
+    },
+  };
+  let suit = match required_string(record, "suit", span)?
+    .to_ascii_lowercase()
+    .as_str()
+  {
+    "spades" | "spade" => Suit::Spades,
+    "hearts" | "heart" => Suit::Hearts,
+    "diamonds" | "diamond" => Suit::Diamonds,
+    "clubs" | "club" => Suit::Clubs,
+    other => {
+      return Err(config_error(
+        format!("unsupported card suit `{other}`"),
+        span,
+      ));
+    },
+  };
+  Ok(UiNode::Suite(SuiteWidget::Card { rank, suit }))
+}
+
+/// Parses normalized equalizer band levels.
+fn parse_equalizer(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let bands = parse_number_list(required(record, "bands", span)?, "bands")?;
+  if bands.iter().any(|value| !(0.0..=1.0).contains(value)) {
+    return Err(config_error(
+      "equalizer bands must be between 0 and 1",
+      span,
+    ));
+  }
+  let brightness = optional_number(record, "brightness")?.unwrap_or(1.0);
+  if !(0.0..=1.0).contains(&brightness) {
+    return Err(config_error("`brightness` must be between 0 and 1", span));
+  }
+  Ok(UiNode::Suite(SuiteWidget::Equalizer { bands, brightness }))
+}
+
+/// Parses an automatically centered textual popup.
+fn parse_popup(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let width = optional_usize(record, "width")?;
+  let height = optional_usize(record, "height")?;
+  if width == Some(0) || height == Some(0) {
+    return Err(config_error("popup dimensions must be at least 1", span));
+  }
+  Ok(UiNode::Suite(SuiteWidget::Popup {
+    text: required_string(record, "text", span)?,
+    block: parse_block(record, true)?,
+    width,
+    height,
+  }))
+}
+
+/// Parses a declarative snapshot of a text prompt.
+fn parse_text_prompt(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let render_style = match optional_string(record, "render-style")?.as_deref() {
+    None | Some("default") => TextRenderStyle::Default,
+    Some("password") => TextRenderStyle::Password,
+    Some("invisible") => TextRenderStyle::Invisible,
+    Some(other) => {
+      return Err(config_error(
+        format!("unsupported prompt render style `{other}`"),
+        span,
+      ));
+    },
+  };
+  Ok(UiNode::Suite(SuiteWidget::TextPrompt {
+    message: required_string(record, "message", span)?,
+    value: optional_string(record, "value")?.unwrap_or_default(),
+    status: parse_prompt_status(record, span)?,
+    focus: parse_prompt_focus(record)?,
+    render_style,
+    show_status: !optional_bool(record, "hide-status")?.unwrap_or(false),
+    block: parse_block(record, false)?,
+  }))
+}
+
+/// Parses a declarative snapshot of a select prompt.
+fn parse_select_prompt(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let options = parse_string_list(required(record, "options", span)?)?;
+  let selected = optional_usize(record, "selected")?.unwrap_or(0);
+  if !options.is_empty() && selected >= options.len() {
+    return Err(config_error("`selected` must identify an option", span));
+  }
+  Ok(UiNode::Suite(SuiteWidget::SelectPrompt {
+    label: required_string(record, "label", span)?,
+    options,
+    selected,
+    status: parse_prompt_status(record, span)?,
+    focus: parse_prompt_focus(record)?,
+    block: parse_block(record, false)?,
+  }))
+}
+
+/// Parses and validates QR payload and rendering options.
+fn parse_qr_code(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let data = required_string(record, "data", span)?;
+  qrcode::QrCode::new(data.as_bytes())
+    .map_err(|error| config_error(format!("failed to encode QR data: {error}"), span))?;
+  let scale_width = optional_u16(record, "scale-width")?.unwrap_or(1);
+  let scale_height = optional_u16(record, "scale-height")?.unwrap_or(1);
+  if scale_width == 0 || scale_height == 0 {
+    return Err(config_error("QR scale dimensions must be at least 1", span));
+  }
+  let scaling = match optional_string(record, "scaling")?.as_deref() {
+    None | Some("exact") => QrScaling::Exact(scale_width, scale_height),
+    Some("min") => QrScaling::Min,
+    Some("max") => QrScaling::Max,
+    Some(other) => {
+      return Err(config_error(
+        format!("unsupported QR scaling `{other}`"),
+        span,
+      ));
+    },
+  };
+  Ok(UiNode::Suite(SuiteWidget::QrCode {
+    data,
+    quiet_zone: if optional_bool(record, "no-quiet-zone")?.unwrap_or(false) {
+      QuietZone::Disabled
+    } else {
+      QuietZone::Enabled
+    },
+    scaling,
+    colors: if optional_bool(record, "inverted")?.unwrap_or(false) {
+      QrColors::Inverted
+    } else {
+      QrColors::Normal
+    },
+    style: parse_style(record.get("style"))?,
+  }))
+}
+
+/// Parses the suite's fractional scrollbar without replacing Ratatui's native scrollbar.
+fn parse_fractional_scrollbar(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let orientation = match optional_string(record, "orientation")?.as_deref() {
+    None | Some("vertical") => FractionalScrollbarOrientation::Vertical,
+    Some("horizontal") => FractionalScrollbarOrientation::Horizontal,
+    Some(other) => {
+      return Err(config_error(
+        format!("unsupported scrollbar orientation `{other}`"),
+        span,
+      ));
+    },
+  };
+  let arrows = match optional_string(record, "arrows")?.as_deref() {
+    None | Some("none") => ScrollBarArrows::None,
+    Some("start") => ScrollBarArrows::Start,
+    Some("end") => ScrollBarArrows::End,
+    Some("both") => ScrollBarArrows::Both,
+    Some(other) => {
+      return Err(config_error(
+        format!("unsupported scrollbar arrows `{other}`"),
+        span,
+      ));
+    },
+  };
+  let glyphs = match optional_string(record, "glyphs")?.as_deref() {
+    None | Some("legacy") => FractionalGlyphs::Legacy,
+    Some("minimal") => FractionalGlyphs::Minimal,
+    Some("box-drawing") => FractionalGlyphs::BoxDrawing,
+    Some("unicode") => FractionalGlyphs::Unicode,
+    Some(other) => {
+      return Err(config_error(
+        format!("unsupported scrollbar glyphs `{other}`"),
+        span,
+      ));
+    },
+  };
+  Ok(UiNode::Suite(SuiteWidget::FractionalScrollbar {
+    content_length: required_usize(record, "content-length", span)?,
+    viewport_length: required_usize(record, "viewport-length", span)?,
+    position: optional_usize(record, "position")?.unwrap_or(0),
+    orientation,
+    arrows,
+    glyphs,
+    track_style: parse_style(record.get("track-style"))?,
+    thumb_style: parse_style(record.get("thumb-style"))?,
+    arrow_style: parse_style(record.get("arrow-style"))?,
+  }))
+}
+
+/// Parses a scrollable off-screen child buffer and explicit viewport offset.
+fn parse_scroll_view(
+  record: &Record,
+  span: Span,
+  effect_ids: &mut HashSet<String>,
+) -> Result<UiNode, LabeledError> {
+  let width =
+    optional_u16(record, "width")?.ok_or_else(|| config_error("missing `width`", span))?;
+  let height =
+    optional_u16(record, "height")?.ok_or_else(|| config_error("missing `height`", span))?;
+  if width == 0 || height == 0 {
+    return Err(config_error(
+      "scroll-view dimensions must be at least 1",
+      span,
+    ));
+  }
+  Ok(UiNode::Suite(SuiteWidget::ScrollView {
+    width,
+    height,
+    scroll_x: optional_u16(record, "scroll-x")?.unwrap_or(0),
+    scroll_y: optional_u16(record, "scroll-y")?.unwrap_or(0),
+    vertical_scrollbar: parse_scrollbar_visibility(record, "vertical-scrollbar", span)?,
+    horizontal_scrollbar: parse_scrollbar_visibility(record, "horizontal-scrollbar", span)?,
+    child: Box::new(UiNode::parse_with_effect_ids(
+      required(record, "child", span)?,
+      effect_ids,
+    )?),
+  }))
+}
+
+/// Parses a prompt completion status shared by text and select prompts.
+fn parse_prompt_status(record: &Record, span: Span) -> Result<Status, LabeledError> {
+  match optional_string(record, "status")?.as_deref() {
+    None | Some("pending") => Ok(Status::Pending),
+    Some("done") => Ok(Status::Done),
+    Some("aborted") => Ok(Status::Aborted),
+    Some(other) => Err(config_error(
+      format!("unsupported prompt status `{other}`"),
+      span,
+    )),
+  }
+}
+
+/// Parses whether a declarative prompt snapshot is focused.
+fn parse_prompt_focus(record: &Record) -> Result<FocusState, LabeledError> {
+  Ok(if optional_bool(record, "focused")?.unwrap_or(false) {
+    FocusState::Focused
+  } else {
+    FocusState::Unfocused
+  })
+}
+
+/// Parses one scroll-view scrollbar visibility policy.
+fn parse_scrollbar_visibility(
+  record: &Record,
+  field: &str,
+  span: Span,
+) -> Result<ScrollbarVisibility, LabeledError> {
+  match optional_string(record, field)?.as_deref() {
+    None | Some("automatic") => Ok(ScrollbarVisibility::Automatic),
+    Some("always") => Ok(ScrollbarVisibility::Always),
+    Some("never") => Ok(ScrollbarVisibility::Never),
+    Some(other) => Err(config_error(
+      format!("unsupported scrollbar visibility `{other}`"),
+      span,
+    )),
+  }
+}
+
 /// Parses the common block and style fields for a widget.
 fn parse_block(record: &Record, default_border: bool) -> Result<BlockSpec, LabeledError> {
   let has_border = optional_bool(record, "border")?.unwrap_or(default_border);
@@ -868,6 +1321,26 @@ fn parse_number(value: &Value) -> Result<f64, LabeledError> {
 /// Parses a required numeric record field.
 fn required_number(record: &Record, field: &str, span: Span) -> Result<f64, LabeledError> {
   parse_number(required(record, field, span)?)
+}
+
+/// Parses a list containing only finite integer or float values.
+fn parse_number_list(value: &Value, context: &str) -> Result<Vec<f64>, LabeledError> {
+  value
+    .as_list()
+    .map_err(|_| {
+      config_error(
+        format!("`{context}` must be a list of numbers"),
+        value.span(),
+      )
+    })?
+    .iter()
+    .map(parse_number)
+    .collect()
+}
+
+/// Returns an optional finite numeric field.
+fn optional_number(record: &Record, field: &str) -> Result<Option<f64>, LabeledError> {
+  record.get(field).map(parse_number).transpose()
 }
 
 /// Parses a two-number bound list and requires increasing values.
@@ -1290,5 +1763,75 @@ mod tests {
     let error = UiNode::parse(&calendar).expect_err("calendar year should be invalid");
 
     assert!(error.labels[0].text.contains("-9999 and 9999"));
+  }
+
+  /// Verifies every external suite widget has a parser-compatible minimal record.
+  #[test]
+  fn parses_every_tui_widgets_suite_record() {
+    let spacer = record(vec![("type", Value::test_string("spacer"))]);
+    let widgets = vec![
+      record(vec![
+        ("type", Value::test_string("bar-graph")),
+        (
+          "data",
+          Value::test_list(vec![Value::test_float(0.25), Value::test_float(0.75)]),
+        ),
+      ]),
+      record(vec![
+        ("type", Value::test_string("big-text")),
+        ("text", Value::test_string("TUI")),
+      ]),
+      record(vec![
+        ("type", Value::test_string("box-text")),
+        ("character", Value::test_string("R")),
+      ]),
+      record(vec![
+        ("type", Value::test_string("card")),
+        ("rank", Value::test_string("ace")),
+        ("suit", Value::test_string("spades")),
+      ]),
+      record(vec![
+        ("type", Value::test_string("equalizer")),
+        (
+          "bands",
+          Value::test_list(vec![Value::test_float(0.2), Value::test_float(0.8)]),
+        ),
+      ]),
+      record(vec![
+        ("type", Value::test_string("popup")),
+        ("text", Value::test_string("hello")),
+      ]),
+      record(vec![
+        ("type", Value::test_string("text-prompt")),
+        ("message", Value::test_string("Name")),
+      ]),
+      record(vec![
+        ("type", Value::test_string("select-prompt")),
+        ("label", Value::test_string("Language")),
+        (
+          "options",
+          Value::test_list(vec![Value::test_string("Rust"), Value::test_string("Nu")]),
+        ),
+      ]),
+      record(vec![
+        ("type", Value::test_string("qr-code")),
+        ("data", Value::test_string("https://ratatui.rs")),
+      ]),
+      record(vec![
+        ("type", Value::test_string("fractional-scrollbar")),
+        ("content-length", Value::test_int(100)),
+        ("viewport-length", Value::test_int(20)),
+      ]),
+      record(vec![
+        ("type", Value::test_string("scroll-view")),
+        ("width", Value::test_int(40)),
+        ("height", Value::test_int(20)),
+        ("child", spacer),
+      ]),
+    ];
+
+    for widget in widgets {
+      assert!(matches!(UiNode::parse(&widget), Ok(UiNode::Suite(_))));
+    }
   }
 }

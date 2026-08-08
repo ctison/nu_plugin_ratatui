@@ -342,9 +342,41 @@ The Ratatui mascot is 32 cells wide by 16 cells high. `blink: true` renders its 
 {type: tabs titles: [Home Metrics Help] selected: 1 highlight-style: {fg: cyan bold: true}}
 ```
 
+## tui-widgets suite
+
+The plugin also exposes every concrete widget family enabled by [`tui-widgets`](https://crates.io/crates/tui-widgets) 0.7.10. Their constructors use the same `tui <type>` convention as the built-in Ratatui widgets.
+
+| Type | Required fields | Optional fields and defaults |
+| --- | --- | --- |
+| `bar-graph` | `data`: number list | `min` and `max` inferred from data; `bar-style`: `braille`, `solid`, `quadrant`, or `octant` (`braille`) |
+| `big-text` | `text`: string | `pixel-size`: `full`, `half-height`, `half-width`, `quadrant`, `third-height`, `sextant`, `quarter-height`, or `octant` (`full`); `alignment` (`left`); presentation fields |
+| `box-text` | `character`: one-character string | none |
+| `card` | `rank`, `suit`: strings | ranks accept names, numbers, or `a`/`j`/`q`/`k`; suits are `spades`, `hearts`, `diamonds`, or `clubs` |
+| `equalizer` | `bands`: numbers from 0 through 1 | `brightness`: number from 0 through 1 (`1`) |
+| `popup` | `text`: string | `width` and `height` measured from text; presentation fields, with borders enabled by default |
+| `text-prompt` | `message`: string | `value` (empty), `status`: `pending`, `done`, or `aborted` (`pending`), `focused` (`false`), `render-style`: `default`, `password`, or `invisible` (`default`), `hide-status` (`false`), presentation fields |
+| `select-prompt` | `label`: string, `options`: string list | `selected` (`0`), `status` (`pending`), `focused` (`false`), presentation fields |
+| `qr-code` | `data`: string | `no-quiet-zone` (`false`), `scaling`: `exact`, `min`, or `max` (`exact`), `scale-width` and `scale-height` (`1`), `inverted` (`false`), `style` |
+| `fractional-scrollbar` | `content-length`, `viewport-length`: non-negative integers | `position` (`0`), `orientation`: `vertical` or `horizontal` (`vertical`), `arrows`: `none`, `start`, `end`, or `both` (`none`), `glyphs`: `legacy`, `unicode`, `box-drawing`, or `minimal` (`legacy`), `track-style`, `thumb-style`, `arrow-style` |
+| `scroll-view` | `width`, `height`: positive integers; `child`: widget record | `scroll-x`, `scroll-y` (`0`); `vertical-scrollbar`, `horizontal-scrollbar`: `automatic`, `always`, or `never` (`automatic`) |
+
+```nu
+let banner = tui big-text "NU" --pixel-size quadrant --style {fg: cyan}
+let levels = tui equalizer [0.15 0.5 0.9 0.65 0.3]
+let prompt = tui text-prompt "Name" --value "Ada" --focused
+let code = tui qr-code "https://ratatui.rs" --no-quiet-zone
+
+tui (tui layout [$banner $levels $prompt $code]
+  --constraints [{length: 6} {length: 6} {length: 3} {fill: 1}])
+```
+
+Prompt records are declarative snapshots. Keep their `value`, `selected`, `status`, and `focused` fields in ordinary application state and update that state from `--on-key`; the next view rebuild renders the new snapshot. A scroll view works the same way: update `scroll-x` or `scroll-y` from handlers to move its viewport.
+
+`fractional-scrollbar` is the suite's subcell-precision widget. The existing `scrollbar` type remains Ratatui's native scrollbar, preserving its orientations and behavior.
+
 ## Presentation fields
 
-All block-wrapped widgets accept these fields: bar charts, buttons, calendars, canvases, charts, gauges, line gauges, lists, paragraphs, sparklines, tables, and tabs.
+All block-wrapped widgets accept these fields: bar charts, buttons, calendars, canvases, charts, gauges, line gauges, lists, paragraphs, sparklines, tables, tabs, big text, popups, and both prompt types.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |

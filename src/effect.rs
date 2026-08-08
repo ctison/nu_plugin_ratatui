@@ -5,7 +5,7 @@ use std::{
 
 use nu_plugin::{EngineInterface, EvaluatedCall, SimplePluginCommand};
 use nu_protocol::{Category, LabeledError, Record, Signature, SyntaxShape, Type, Value};
-use ratatui::{Frame, layout::Rect, style::Color};
+use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 use tachyonfx::{
   CellFilter, Effect, EffectTimer, Interpolation, Motion, SimpleRng,
   fx::{self, RepeatMode},
@@ -128,7 +128,7 @@ impl EffectRegistry {
   }
 
   /// Applies one wrapper effect after its child has rendered into the current area.
-  pub(crate) fn apply(&mut self, id: &str, spec: &EffectSpec, frame: &mut Frame<'_>, area: Rect) {
+  pub(crate) fn apply(&mut self, id: &str, spec: &EffectSpec, buffer: &mut Buffer, area: Rect) {
     let is_new = match self.entries.get(id) {
       Some(entry) => entry.spec != *spec,
       None => true,
@@ -145,7 +145,7 @@ impl EffectRegistry {
     self.seen.insert(id.to_owned());
     let elapsed = if is_new { Duration::ZERO } else { self.elapsed };
     let entry = self.entries.get_mut(id).expect("effect entry was inserted");
-    entry.effect.process(elapsed, frame.buffer_mut(), area);
+    entry.effect.process(elapsed, buffer, area);
   }
 
   /// Removes registry entries whose wrappers were absent from the rendered tree.
@@ -1334,38 +1334,56 @@ mod tests {
     let mut terminal = Terminal::new(TestBackend::new(1, 1)).unwrap();
     registry.begin_frame(Duration::ZERO);
     terminal
-      .draw(|frame| registry.apply("a", &first, frame, frame.area()))
+      .draw(|frame| {
+        let area = frame.area();
+        registry.apply("a", &first, frame.buffer_mut(), area);
+      })
       .unwrap();
     registry.end_frame();
     assert_eq!(registry.entries.len(), 1);
     let original = registry.entries.get("a").unwrap().effect.timer();
     registry.begin_frame(Duration::from_millis(5));
     terminal
-      .draw(|frame| registry.apply("a", &first, frame, frame.area()))
+      .draw(|frame| {
+        let area = frame.area();
+        registry.apply("a", &first, frame.buffer_mut(), area);
+      })
       .unwrap();
     registry.end_frame();
     assert_ne!(registry.entries.get("a").unwrap().effect.timer(), original);
     registry.begin_frame(Duration::from_millis(5));
     terminal
-      .draw(|frame| registry.apply("a", &changed, frame, frame.area()))
+      .draw(|frame| {
+        let area = frame.area();
+        registry.apply("a", &changed, frame.buffer_mut(), area);
+      })
       .unwrap();
     registry.end_frame();
     assert_eq!(registry.entries.get("a").unwrap().effect.timer(), original);
     registry.begin_frame(Duration::from_millis(20));
     terminal
-      .draw(|frame| registry.apply("a", &changed, frame, frame.area()))
+      .draw(|frame| {
+        let area = frame.area();
+        registry.apply("a", &changed, frame.buffer_mut(), area);
+      })
       .unwrap();
     registry.end_frame();
     assert!(!registry.any_running());
     registry.begin_frame(Duration::from_millis(20));
     terminal
-      .draw(|frame| registry.apply("a", &changed, frame, frame.area()))
+      .draw(|frame| {
+        let area = frame.area();
+        registry.apply("a", &changed, frame.buffer_mut(), area);
+      })
       .unwrap();
     registry.end_frame();
     assert!(!registry.any_running());
     registry.begin_frame(Duration::ZERO);
     terminal
-      .draw(|frame| registry.apply("b", &changed, frame, frame.area()))
+      .draw(|frame| {
+        let area = frame.area();
+        registry.apply("b", &changed, frame.buffer_mut(), area);
+      })
       .unwrap();
     registry.end_frame();
     assert!(!registry.entries.contains_key("a"));
