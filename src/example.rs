@@ -63,6 +63,10 @@ const EXAMPLES: &[EmbeddedExample] = &[
     source: include_str!("../examples/colors-rgb.nu"),
   },
   EmbeddedExample {
+    name: "command-preview",
+    source: include_str!("../examples/command-preview.nu"),
+  },
+  EmbeddedExample {
     name: "constraint-explorer",
     source: include_str!("../examples/constraint-explorer.nu"),
   },

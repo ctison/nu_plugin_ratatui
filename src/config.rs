@@ -1,10 +1,12 @@
 use std::{str::FromStr, time::Duration};
 
+use ansi_to_tui::IntoText as _;
 use nu_protocol::{LabeledError, Record, Span, Spanned, Value, engine::Closure};
 use ratatui::{
   layout::{Alignment, Constraint, Direction},
   style::{Color, Modifier, Style},
   symbols::Marker,
+  text::Text,
   widgets::{BorderType, Borders, GraphType, ScrollbarOrientation},
 };
 
@@ -77,10 +79,12 @@ pub enum UiNode {
     children: Vec<UiNode>,
   },
   Paragraph {
-    text: String,
+    text: Text<'static>,
     block: BlockSpec,
     alignment: Alignment,
     wrap: bool,
+    scroll_x: u16,
+    scroll_y: u16,
   },
   Button {
     id: String,
@@ -344,11 +348,27 @@ fn parse_constraint(value: &Value) -> Result<Constraint, LabeledError> {
 
 /// Parses a paragraph widget record.
 fn parse_paragraph(record: &Record, span: Span) -> Result<UiNode, LabeledError> {
+  let text_value = required(record, "text", span)?;
+  let text = text_value
+    .as_str()
+    .map_err(|error| LabeledError::from_diagnostic(&error))?;
+  let text = if optional_bool(record, "ansi")?.unwrap_or(false) {
+    text.into_text().map_err(|error| {
+      config_error(
+        format!("failed to parse ANSI text: {error}"),
+        text_value.span(),
+      )
+    })?
+  } else {
+    Text::raw(text.to_owned())
+  };
   Ok(UiNode::Paragraph {
-    text: required_string(record, "text", span)?,
+    text,
     block: parse_block(record, false)?,
     alignment: parse_alignment(record, span)?,
     wrap: optional_bool(record, "wrap")?.unwrap_or(true),
+    scroll_x: optional_u16(record, "scroll-x")?.unwrap_or(0),
+    scroll_y: optional_u16(record, "scroll-y")?.unwrap_or(0),
   })
 }
 
@@ -1167,6 +1187,35 @@ mod tests {
       error.labels[0]
         .text
         .contains("unsupported widget type `block`")
+    );
+  }
+
+  /// Verifies paragraph scroll offsets fit Ratatui's terminal coordinate range.
+  #[test]
+  fn rejects_invalid_paragraph_scroll_offsets() {
+    let negative = record(vec![
+      ("type", Value::test_string("paragraph")),
+      ("text", Value::test_string("preview")),
+      ("scroll-x", Value::test_int(-1)),
+    ]);
+    let too_large = record(vec![
+      ("type", Value::test_string("paragraph")),
+      ("text", Value::test_string("preview")),
+      ("scroll-y", Value::test_int(65_536)),
+    ]);
+
+    let negative_error = UiNode::parse(&negative).expect_err("negative scroll should fail");
+    let too_large_error = UiNode::parse(&too_large).expect_err("large scroll should fail");
+
+    assert!(
+      negative_error.labels[0]
+        .text
+        .contains("must be non-negative")
+    );
+    assert!(
+      too_large_error.labels[0]
+        .text
+        .contains("must be at most 65535")
     );
   }
 

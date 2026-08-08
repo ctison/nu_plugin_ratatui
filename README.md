@@ -72,6 +72,7 @@ Every `examples/*.nu` script is embedded in the plugin. Pass its filename withou
 
 ```nu
 tui example volatility-surface
+tui example command-preview
 ```
 
 Omit the name to choose from an interactive list with a `nu-highlight` syntax-colored source preview. Use Page Up and Page Down to scroll the preview:
@@ -117,7 +118,7 @@ Nushell 0.114 resolves `source` paths at parse time and plugin commands are not 
 
 `tui` returns the final state, so the example evaluates to the click count after the UI closes. A complete runnable version is in [`examples/counter.nu`](examples/counter.nu).
 
-The [`examples/`](examples/README.md) gallery also contains dependency-free Nushell ports of 26 applications from Ratatui's upstream examples.
+The [`examples/`](examples/README.md) gallery also contains dependency-free Nushell ports of 26 applications from Ratatui's upstream examples, plus a focused ANSI command-preview example.
 
 ## Application command
 

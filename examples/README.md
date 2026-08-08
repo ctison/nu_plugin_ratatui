@@ -50,6 +50,8 @@ These 26 scripts adapt examples from [Ratatui's `examples/apps` directory](https
 | widget-ref-container | [`widget-ref-container.nu`](widget-ref-container.nu) | Heterogeneous widget records in a container. |
 
 [`counter.nu`](counter.nu) is the plugin's original mouse-handler example rather than an upstream port.
+[`command-preview.nu`](command-preview.nu) demonstrates a two-column selector that runs Git
+subcommands on selection and displays cached ANSI output with two-axis scrolling.
 
 ## Not ported
 

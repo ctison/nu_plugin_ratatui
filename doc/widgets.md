@@ -55,8 +55,20 @@ Constraint values must be integers from 0 through 65535. If `constraints` is sup
 | `text` | string | yes | — | Text to display. |
 | `alignment` | string | no | `left` | `left`, `center`, or `right`. |
 | `wrap` | bool | no | `true` | Wrap long text and trim leading whitespace on wrapped lines. |
+| `ansi` | bool | no | `false` | Interpret ANSI SGR colors and text modifiers. |
+| `scroll-x` | int | no | `0` | Horizontal scroll offset in cells. |
+| `scroll-y` | int | no | `0` | Vertical scroll offset in lines. |
 
 Paragraphs also support the [presentation fields](#presentation-fields).
+
+ANSI paragraphs support named, indexed, and truecolor SGR colors plus text modifiers such as bold,
+italic, underline, and strikethrough. Unknown or malformed escape sequences are ignored; paragraphs
+are not full terminal emulators, so cursor-addressed applications are not supported. Set `wrap` to
+`false` when using `scroll-x` so long lines remain horizontally scrollable.
+
+```nu
+tui paragraph $command_output --ansi --wrap=false --scroll-x 4 --scroll-y 10 --border
+```
 
 ## Button
 

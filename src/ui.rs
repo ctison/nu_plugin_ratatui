@@ -42,11 +42,14 @@ impl UiNode {
         block,
         alignment,
         wrap,
+        scroll_x,
+        scroll_y,
       } => {
-        let mut widget = Paragraph::new(text.as_str())
+        let mut widget = Paragraph::new(text.clone())
           .alignment(*alignment)
           .style(block.style)
-          .block(make_block(block));
+          .block(make_block(block))
+          .scroll((*scroll_y, *scroll_x));
         if *wrap {
           widget = widget.wrap(Wrap { trim: true });
         }
@@ -383,7 +386,11 @@ fn make_axis(spec: &AxisSpec) -> Axis<'_> {
 #[cfg(test)]
 mod tests {
   use nu_protocol::{Record, Value};
-  use ratatui::{Terminal, backend::TestBackend};
+  use ratatui::{
+    Terminal,
+    backend::TestBackend,
+    style::{Color, Modifier},
+  };
 
   use crate::config::UiNode;
 
@@ -418,5 +425,55 @@ mod tests {
     assert!(hits[0].contains(0, 0));
     let rendered = terminal.backend().to_string();
     assert!(rendered.contains("Save"));
+  }
+
+  /// Verifies ANSI SGR colors and modifiers are applied to rendered cells.
+  #[test]
+  fn renders_ansi_styled_paragraph() {
+    let paragraph = record(vec![
+      ("type", Value::test_string("paragraph")),
+      ("text", Value::test_string("\u{1b}[31;44;1mR\u{1b}[0m")),
+      ("ansi", Value::test_bool(true)),
+    ]);
+    let node = UiNode::parse(&paragraph).expect("valid ANSI paragraph");
+    let backend = TestBackend::new(1, 1);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+
+    terminal
+      .draw(|frame| node.render(frame, frame.area(), &mut Vec::new()))
+      .expect("draw succeeds");
+
+    let cell = terminal
+      .backend()
+      .buffer()
+      .cell((0, 0))
+      .expect("rendered cell");
+    assert_eq!(cell.symbol(), "R");
+    assert_eq!(cell.fg, Color::Red);
+    assert_eq!(cell.bg, Color::Blue);
+    assert!(cell.modifier.contains(Modifier::BOLD));
+  }
+
+  /// Verifies both paragraph scroll offsets affect the visible text.
+  #[test]
+  fn renders_scrolled_paragraph() {
+    let paragraph = record(vec![
+      ("type", Value::test_string("paragraph")),
+      ("text", Value::test_string("abcd\nefgh\nijkl")),
+      ("wrap", Value::test_bool(false)),
+      ("scroll-x", Value::test_int(2)),
+      ("scroll-y", Value::test_int(1)),
+    ]);
+    let node = UiNode::parse(&paragraph).expect("valid scrolled paragraph");
+    let backend = TestBackend::new(2, 1);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+
+    terminal
+      .draw(|frame| node.render(frame, frame.area(), &mut Vec::new()))
+      .expect("draw succeeds");
+
+    let buffer = terminal.backend().buffer();
+    assert_eq!(buffer.cell((0, 0)).expect("first cell").symbol(), "g");
+    assert_eq!(buffer.cell((1, 0)).expect("second cell").symbol(), "h");
   }
 }

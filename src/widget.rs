@@ -310,6 +310,23 @@ impl WidgetKind {
             "wrap",
             "Whether text wraps (default: true)",
             None,
+          )
+          .switch(
+            "ansi",
+            "Whether to interpret ANSI SGR styles (default: false)",
+            None,
+          )
+          .named(
+            "scroll-x",
+            SyntaxShape::Int,
+            "Horizontal scroll offset in cells (default: 0)",
+            None,
+          )
+          .named(
+            "scroll-y",
+            SyntaxShape::Int,
+            "Vertical scroll offset in lines (default: 0)",
+            None,
           ),
         false,
       ),
@@ -704,6 +721,9 @@ mod tests {
       vec![
         ("alignment", Value::test_string("center")),
         ("border", Value::test_bool(true)),
+        ("ansi", Value::test_bool(true)),
+        ("scroll-x", Value::test_int(2)),
+        ("scroll-y", Value::test_int(3)),
       ],
     );
 
@@ -713,6 +733,9 @@ mod tests {
     assert_eq!(record.get("type").unwrap().as_str().unwrap(), "paragraph");
     assert_eq!(record.get("text").unwrap().as_str().unwrap(), "hello");
     assert!(record.get("border").unwrap().as_bool().unwrap());
+    assert!(record.get("ansi").unwrap().as_bool().unwrap());
+    assert_eq!(record.get("scroll-x").unwrap().as_int().unwrap(), 2);
+    assert_eq!(record.get("scroll-y").unwrap().as_int().unwrap(), 3);
   }
 
   /// Verifies bare widget switches are emitted as true record fields.
