@@ -1,6 +1,6 @@
 # Getting started
 
-The plugin targets Nushell 0.114.1 and provides the root `tui` application command plus widget record constructors under `tui`.
+The plugin provides the root `tui` application command plus widget record constructors under `tui`.
 
 ## Build and run without installing
 

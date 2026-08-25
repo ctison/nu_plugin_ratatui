@@ -6,8 +6,6 @@ Detailed guides and reference material are available in [`doc/`](doc/README.md).
 
 ## Quick start
 
-The plugin targets Nushell 0.114.1.
-
 ```nu
 cargo build
 nu --plugins target/debug/nu_plugin_ratatui examples/counter.nu
@@ -87,7 +85,7 @@ To evaluate returned source explicitly, start a child Nushell with the command t
 nu --commands (tui example volatility-surface)
 ```
 
-Nushell 0.114 resolves `source` paths at parse time and plugin commands are not const, so `source (tui example ...)` cannot be evaluated by Nushell itself.
+Nushell resolves `source` paths at parse time and plugin commands are not const, so `source (tui example ...)` cannot be evaluated by Nushell itself.
 
 ## Counter example
 
@@ -122,14 +120,19 @@ The [`examples/`](examples/README.md) gallery also contains dependency-free Nush
 
 ## Application command
 
-| Parameter | Type | Meaning |
-| --- | --- | --- |
-| `view` | positional record or closure | Required widget tree, or `{ \|state\| ... }` returning one |
-| `--state` | any | Initial state; defaults to `null` |
-| `--on-event` | closure | Handles every terminal event |
-| `--on-key` | closure | Handles key press events |
-| `--quit-on-esc` | bool | Exit on Escape; defaults to `true` |
-| `--tick-rate-ms` | int | Handler `tick` interval; defaults to `250` |
+| Parameter        | Type                         | Meaning                                                                    |
+| ---------------- | ---------------------------- | -------------------------------------------------------------------------- |
+| `view`           | positional record or closure | Required widget tree, or `{ \|state\| ... }` returning one                 |
+| `--state`        | any                          | Initial state; defaults to `null`                                          |
+| `--on-event`     | closure                      | Handles every terminal event                                               |
+| `--on-key`       | closure                      | Handles key press events                                                   |
+| `--quit-on-esc`  | bool                         | Exit on Escape; defaults to `true`                                         |
+| `--tick-rate-ms` | int                          | Handler `tick` interval; defaults to `250` 'github:atanunq/viu' = 'latest' |
+
+'github:ctison/macos-sendkeys' = 'latest'
+'github:ctison/nu_plugin_ratatui' = 'latest'
+'github:vercel-labs/fx' = 'latest'
+|
 
 Handlers receive one event record. Every event includes `type` and the current `state`; key events also contain `code`, `kind`, and `modifiers`, while mouse events contain coordinates, the mouse action, and `widget` when over an interactive widget.
 
